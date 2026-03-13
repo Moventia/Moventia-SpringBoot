@@ -21,23 +21,23 @@ export function UserProfile({ userId, onNavigate }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Profile Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+      <div className="bg-gradient-to-r from-[#1a1510] via-[#15120e] to-[#0f0d0a]">
         <div className="container mx-auto px-4 py-12">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-            <Avatar className="h-32 w-32 border-4 border-white shadow-xl">
+            <Avatar className="h-32 w-32 border-4 border-primary/30 shadow-xl">
               <AvatarImage src={user.avatar} alt={user.name} />
               <AvatarFallback className="text-4xl">{user.name[0]}</AvatarFallback>
             </Avatar>
             <div className="flex-1 text-center md:text-left">
               <div className="flex flex-col md:flex-row md:items-center gap-3 mb-3">
-                <h1 className="text-4xl font-bold">{user.name}</h1>
+                <h1 className="text-4xl font-bold text-foreground">{user.name}</h1>
                 {!isOwnProfile && (
                   <Button
                     onClick={handleFollowToggle}
                     variant={isFollowing ? 'outline' : 'default'}
-                    className={isFollowing ? 'border-white text-white hover:bg-white/10' : 'bg-white text-purple-600 hover:bg-gray-100'}
+                    className={isFollowing ? 'border-foreground/30 text-foreground hover:bg-foreground/10' : ''}
                   >
                     {isFollowing ? 'Following' : 'Follow'}
                   </Button>
@@ -45,33 +45,33 @@ export function UserProfile({ userId, onNavigate }) {
                 {isOwnProfile && (
                   <Button
                     variant="outline"
-                    className="border-white text-white hover:bg-white/10"
+                    className="border-foreground/30 text-foreground hover:bg-foreground/10"
                   >
                     <Settings className="h-4 w-4 mr-2" />
                     Edit Profile
                   </Button>
                 )}
               </div>
-              <p className="text-lg mb-4 opacity-90">@{user.username}</p>
-              <p className="mb-4 max-w-2xl">{user.bio}</p>
+              <p className="text-lg mb-4 text-muted-foreground">@{user.username}</p>
+              <p className="mb-4 max-w-2xl text-foreground/80">{user.bio}</p>
               <div className="flex flex-wrap gap-6 justify-center md:justify-start">
                 <div>
-                  <p className="text-2xl font-bold">{user.reviewCount}</p>
-                  <p className="text-sm opacity-80">Reviews</p>
+                  <p className="text-2xl font-bold text-foreground">{user.reviewCount}</p>
+                  <p className="text-sm text-muted-foreground">Reviews</p>
                 </div>
                 <div 
                   className="cursor-pointer hover:opacity-80"
                   onClick={() => onNavigate('followers', { userId: user.id })}
                 >
-                  <p className="text-2xl font-bold">{user.followers}</p>
-                  <p className="text-sm opacity-80">Followers</p>
+                  <p className="text-2xl font-bold text-foreground">{user.followers}</p>
+                  <p className="text-sm text-muted-foreground">Followers</p>
                 </div>
                 <div 
                   className="cursor-pointer hover:opacity-80"
                   onClick={() => onNavigate('following', { userId: user.id })}
                 >
-                  <p className="text-2xl font-bold">{user.following}</p>
-                  <p className="text-sm opacity-80">Following</p>
+                  <p className="text-2xl font-bold text-foreground">{user.following}</p>
+                  <p className="text-sm text-muted-foreground">Following</p>
                 </div>
               </div>
             </div>
@@ -91,7 +91,7 @@ export function UserProfile({ userId, onNavigate }) {
           <TabsContent value="reviews" className="space-y-4">
             {userReviews.length > 0 ? (
               userReviews.map((review) => (
-                <Card key={review.id} className="hover:shadow-md transition-shadow">
+                <Card key={review.id} className="hover:shadow-md hover:shadow-primary/5 transition-shadow hover:border-primary/30">
                   <CardContent className="p-6">
                     <div className="flex gap-4">
                       <ImageWithFallback
@@ -103,7 +103,7 @@ export function UserProfile({ userId, onNavigate }) {
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
                           <h3 
-                            className="text-xl font-bold cursor-pointer hover:text-primary"
+                            className="text-xl font-bold cursor-pointer hover:text-primary text-foreground"
                             onClick={() => onNavigate('movie', { id: review.movieId })}
                           >
                             {review.movieTitle}
@@ -115,13 +115,13 @@ export function UserProfile({ userId, onNavigate }) {
                                 className={`h-4 w-4 ${
                                   i < review.rating
                                     ? 'fill-yellow-400 text-yellow-400'
-                                    : 'text-gray-300'
+                                    : 'text-muted-foreground/30'
                                 }`}
                               />
                             ))}
                           </div>
                         </div>
-                        <p className="font-semibold mb-2">{review.title}</p>
+                        <p className="font-semibold mb-2 text-foreground">{review.title}</p>
                         <p className="text-muted-foreground text-sm mb-3">{review.content}</p>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span>{review.createdAt}</span>

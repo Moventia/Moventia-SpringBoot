@@ -21,11 +21,11 @@ export function FollowersPage({ userId, onNavigate }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">{user.name}'s Connections</h1>
+          <h1 className="text-4xl font-bold mb-2 text-foreground">{user.name}'s Connections</h1>
           <p className="text-muted-foreground">@{user.username}</p>
         </div>
 
@@ -42,7 +42,7 @@ export function FollowersPage({ userId, onNavigate }) {
 
           <TabsContent value="followers" className="space-y-3">
             {followers.map((follower) => (
-              <Card key={follower.id} className="hover:shadow-md transition-shadow">
+              <Card key={follower.id} className="hover:shadow-md hover:shadow-primary/5 transition-shadow hover:border-primary/30">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div 
@@ -54,7 +54,7 @@ export function FollowersPage({ userId, onNavigate }) {
                         <AvatarFallback>{follower.name[0]}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <p className="font-semibold hover:underline">{follower.name}</p>
+                        <p className="font-semibold hover:underline text-foreground">{follower.name}</p>
                         <p className="text-sm text-muted-foreground">@{follower.username}</p>
                         <p className="text-sm text-muted-foreground mt-1">{follower.reviewCount} reviews</p>
                       </div>
@@ -84,7 +84,7 @@ export function FollowersPage({ userId, onNavigate }) {
 
           <TabsContent value="following" className="space-y-3">
             {following.map((followedUser) => (
-              <Card key={followedUser.id} className="hover:shadow-md transition-shadow">
+              <Card key={followedUser.id} className="hover:shadow-md hover:shadow-primary/5 transition-shadow hover:border-primary/30">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div 
@@ -96,7 +96,7 @@ export function FollowersPage({ userId, onNavigate }) {
                         <AvatarFallback>{followedUser.name[0]}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <p className="font-semibold hover:underline">{followedUser.name}</p>
+                        <p className="font-semibold hover:underline text-foreground">{followedUser.name}</p>
                         <p className="text-sm text-muted-foreground">@{followedUser.username}</p>
                         <p className="text-sm text-muted-foreground mt-1">{followedUser.reviewCount} reviews</p>
                       </div>

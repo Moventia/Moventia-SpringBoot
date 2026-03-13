@@ -14,12 +14,22 @@ import { mockNotifications } from './lib/mockData';
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentPage, setCurrentPage] = useState('login');
+  const [currentPage, setCurrentPage] = useState('home');
   const [pageData, setPageData] = useState({});
 
   const unreadNotifications = mockNotifications.filter(n => !n.read).length;
 
+  // Pages that require login
+  const protectedPages = ['profile', 'user-profile', 'feed', 'notifications', 'write-review', 'followers', 'following'];
+
   const handleNavigate = (page, data) => {
+    // If trying to access protected page while not logged in, redirect to login
+    if (!isLoggedIn && protectedPages.includes(page)) {
+      setCurrentPage('login');
+      setPageData({ redirectTo: page, redirectData: data });
+      window.scrollTo(0, 0);
+      return;
+    }
     setCurrentPage(page);
     setPageData(data || {});
     window.scrollTo(0, 0);
@@ -27,20 +37,22 @@ export default function App() {
 
   const handleLogin = () => {
     setIsLoggedIn(true);
-    setCurrentPage('home');
+    // If there was a redirect target, go there; otherwise go home
+    if (pageData.redirectTo) {
+      setCurrentPage(pageData.redirectTo);
+      setPageData(pageData.redirectData || {});
+    } else {
+      setCurrentPage('home');
+    }
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
-    setCurrentPage('login');
+    setCurrentPage('home');
   };
 
-  if (!isLoggedIn) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <Navigation
         currentPage={currentPage}
         onNavigate={handleNavigate}
@@ -49,27 +61,33 @@ export default function App() {
         notificationCount={unreadNotifications}
       />
 
-      {currentPage === 'home' && <HomePage onNavigate={handleNavigate} />}
+      {currentPage === 'home' && <HomePage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />}
       {currentPage === 'browse' && <BrowseMovies onNavigate={handleNavigate} />}
       {currentPage === 'movie' && pageData.id && (
-        <MovieDetail movieId={pageData.id} onNavigate={handleNavigate} />
+        <MovieDetail movieId={pageData.id} onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />
       )}
-      {currentPage === 'profile' && <UserProfile onNavigate={handleNavigate} />}
-      {currentPage === 'user-profile' && (
+      {currentPage === 'login' && (
+        <LoginPage onLogin={handleLogin} onCancel={() => handleNavigate('home')} />
+      )}
+
+      {/* Protected pages — only render if logged in */}
+      {currentPage === 'profile' && isLoggedIn && <UserProfile onNavigate={handleNavigate} />}
+      {currentPage === 'user-profile' && isLoggedIn && (
         <UserProfile userId={pageData.userId} onNavigate={handleNavigate} />
       )}
-      {currentPage === 'feed' && <FeedPage onNavigate={handleNavigate} />}
-      {currentPage === 'notifications' && (
+      {currentPage === 'feed' && isLoggedIn && <FeedPage onNavigate={handleNavigate} />}
+      {currentPage === 'notifications' && isLoggedIn && (
         <NotificationsPage onNavigate={handleNavigate} />
       )}
-      {currentPage === 'write-review' && (
+      {currentPage === 'write-review' && isLoggedIn && (
         <WriteReview movieId={pageData.movieId} onNavigate={handleNavigate} />
       )}
-      {(currentPage === 'followers' || currentPage === 'following') && (
+      {(currentPage === 'followers' || currentPage === 'following') && isLoggedIn && (
         <FollowersPage userId={pageData.userId} onNavigate={handleNavigate} />
       )}
 
-      <Chatbot />
+      {/* Chatbot only visible when logged in */}
+      {isLoggedIn && <Chatbot />}
     </div>
   );
 }

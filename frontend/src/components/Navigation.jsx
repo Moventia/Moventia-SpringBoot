@@ -1,4 +1,4 @@
-import { Bell, Home, Film, User, LogOut, Search, MessageCircle } from 'lucide-react';
+import { Bell, Home, Film, User, LogOut, Search } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -6,14 +6,21 @@ import { currentUser } from '../lib/mockData';
 
 
 export function Navigation({ currentPage, onNavigate, isLoggedIn, onLogout, notificationCount = 0 }) {
-  const navItems = [
+  // Public nav items — visible to everyone
+  const publicNavItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'browse', label: 'Browse', icon: Film },
+  ];
+
+  // Private nav items — visible only when logged in
+  const privateNavItems = [
     { id: 'feed', label: 'Feed', icon: Search },
   ];
 
+  const navItems = isLoggedIn ? [...publicNavItems, ...privateNavItems] : publicNavItems;
+
   return (
-    <nav className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+    <nav className="sticky top-0 z-50 border-b border-[#1e1e1e] bg-[#0c0c0c]/95 backdrop-blur supports-[backdrop-filter]:bg-[#0c0c0c]/80">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -22,28 +29,26 @@ export function Navigation({ currentPage, onNavigate, isLoggedIn, onLogout, noti
             onClick={() => onNavigate('home')}
           >
             <Film className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">CineReview</span>
+            <span className="font-bold text-xl text-foreground" style={{ fontFamily: "'Cormorant Garamond', serif", letterSpacing: '0.1em' }}>Moventia</span>
           </div>
 
           {/* Navigation Items */}
-          {isLoggedIn && (
-            <div className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Button
-                    key={item.id}
-                    variant={currentPage === item.id ? 'default' : 'ghost'}
-                    onClick={() => onNavigate(item.id)}
-                    className="gap-2"
-                  >
-                    <Icon className="h-4 w-4" />
-                    {item.label}
-                  </Button>
-                );
-              })}
-            </div>
-          )}
+          <div className="hidden md:flex items-center gap-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Button
+                  key={item.id}
+                  variant={currentPage === item.id ? 'default' : 'ghost'}
+                  onClick={() => onNavigate(item.id)}
+                  className="gap-2"
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </Button>
+              );
+            })}
+          </div>
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-2">
@@ -73,14 +78,17 @@ export function Navigation({ currentPage, onNavigate, isLoggedIn, onLogout, noti
                     <AvatarImage src={currentUser.avatar} alt={currentUser.name} />
                     <AvatarFallback>{currentUser.name[0]}</AvatarFallback>
                   </Avatar>
-                  <span className="hidden md:inline text-sm font-medium">{currentUser.username}</span>
+                  <span className="hidden md:inline text-sm font-medium text-foreground">{currentUser.username}</span>
                 </div>
                 <Button variant="ghost" size="icon" onClick={onLogout}>
                   <LogOut className="h-5 w-5" />
                 </Button>
               </>
             ) : (
-              <Button onClick={() => onNavigate('login')}>
+              <Button 
+                onClick={() => onNavigate('login')}
+                className="bg-transparent border border-primary/40 text-primary hover:bg-primary/10 hover:border-primary/70 text-xs tracking-widest uppercase"
+              >
                 Sign In
               </Button>
             )}

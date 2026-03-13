@@ -3,7 +3,7 @@ import { Film, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 
 const API_URL = 'http://localhost:8080/api/auth';
 
-export function LoginPage({ onLogin }) {
+export function LoginPage({ onLogin, onCancel }) {
   const [showPassword, setShowPassword] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
   const [loginData, setLoginData] = useState({ email: '', password: '' });
@@ -527,6 +527,27 @@ export function LoginPage({ onLogin }) {
           <p className="cin-footer">
             By continuing you agree to our Terms of Service<br />and Privacy Policy
           </p>
+          {onCancel && (
+            <p className="cin-footer" style={{ marginTop: '0.75rem' }}>
+              <button
+                onClick={onCancel}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#c49c55',
+                  cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontSize: '0.72rem',
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  textDecoration: 'none',
+                  transition: 'opacity 0.2s',
+                }}
+              >
+                ← Back to browsing
+              </button>
+            </p>
+          )}
 
         </div>
       </div>

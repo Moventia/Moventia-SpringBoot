@@ -7,15 +7,15 @@ import { mockMovies, mockReviews } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
 
-export function HomePage({ onNavigate }) {
+export function HomePage({ onNavigate, isLoggedIn }) {
   const featuredMovie = mockMovies[0];
   const trendingMovies = mockMovies.slice(0, 4);
   const recentReviews = mockReviews;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <div className="relative h-[500px] bg-gradient-to-r from-purple-900 to-indigo-900 overflow-hidden">
+      <div className="relative h-[500px] bg-gradient-to-b from-[#1a1510] via-[#0f0d0a] to-background overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <ImageWithFallback
             src={featuredMovie.poster}
@@ -24,8 +24,8 @@ export function HomePage({ onNavigate }) {
           />
         </div>
         <div className="relative container mx-auto px-4 h-full flex items-center">
-          <div className="max-w-2xl text-white">
-            <Badge className="mb-4 bg-yellow-500 text-black hover:bg-yellow-600">Featured</Badge>
+          <div className="max-w-2xl text-foreground">
+            <Badge className="mb-4 bg-primary text-primary-foreground hover:bg-primary/90">Featured</Badge>
             <h1 className="text-5xl font-bold mb-4">{featuredMovie.title}</h1>
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-1">
@@ -36,7 +36,7 @@ export function HomePage({ onNavigate }) {
               <span>{featuredMovie.duration}</span>
               <div className="flex gap-1">
                 {featuredMovie.genre.map((g) => (
-                  <Badge key={g} variant="outline" className="border-white text-white">
+                  <Badge key={g} variant="outline" className="border-foreground/30 text-foreground/80">
                     {g}
                   </Badge>
                 ))}
@@ -47,7 +47,7 @@ export function HomePage({ onNavigate }) {
               <Button 
                 size="lg" 
                 onClick={() => onNavigate('movie', { id: featuredMovie.id })}
-                className="bg-white text-black hover:bg-gray-200"
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 View Details
               </Button>
@@ -55,7 +55,7 @@ export function HomePage({ onNavigate }) {
                 size="lg" 
                 variant="outline"
                 onClick={() => onNavigate('write-review', { movieId: featuredMovie.id })}
-                className="border-white text-white hover:bg-white/10"
+                className="border-foreground/30 text-foreground hover:bg-foreground/10"
               >
                 Write Review
               </Button>
@@ -70,7 +70,7 @@ export function HomePage({ onNavigate }) {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-6 w-6 text-primary" />
-              <h2 className="text-3xl font-bold">Trending Now</h2>
+              <h2 className="text-3xl font-bold text-foreground">Trending Now</h2>
             </div>
             <Button variant="ghost" onClick={() => onNavigate('browse')}>
               View All
@@ -80,7 +80,7 @@ export function HomePage({ onNavigate }) {
             {trendingMovies.map((movie) => (
               <Card 
                 key={movie.id} 
-                className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+                className="overflow-hidden cursor-pointer hover:shadow-lg hover:shadow-primary/5 transition-all hover:border-primary/30"
                 onClick={() => onNavigate('movie', { id: movie.id })}
               >
                 <div className="aspect-[2/3] relative">
@@ -95,7 +95,7 @@ export function HomePage({ onNavigate }) {
                   </div>
                 </div>
                 <CardContent className="p-4">
-                  <h3 className="font-semibold mb-1">{movie.title}</h3>
+                  <h3 className="font-semibold mb-1 text-foreground">{movie.title}</h3>
                   <p className="text-sm text-muted-foreground">{movie.year} • {movie.genre.join(', ')}</p>
                   <p className="text-xs text-muted-foreground mt-1">{movie.reviewCount} reviews</p>
                 </CardContent>
@@ -108,11 +108,11 @@ export function HomePage({ onNavigate }) {
         <div>
           <div className="flex items-center gap-2 mb-6">
             <Clock className="h-6 w-6 text-primary" />
-            <h2 className="text-3xl font-bold">Recent Reviews</h2>
+            <h2 className="text-3xl font-bold text-foreground">Recent Reviews</h2>
           </div>
           <div className="space-y-4">
             {recentReviews.map((review) => (
-              <Card key={review.id} className="hover:shadow-md transition-shadow">
+              <Card key={review.id} className="hover:shadow-md hover:shadow-primary/5 transition-shadow hover:border-primary/30">
                 <CardContent className="p-6">
                   <div className="flex gap-4">
                     <ImageWithFallback
@@ -131,10 +131,10 @@ export function HomePage({ onNavigate }) {
                               <AvatarImage src={review.userAvatar} alt={review.username} />
                               <AvatarFallback>{review.username[0]}</AvatarFallback>
                             </Avatar>
-                            <span className="font-semibold">{review.username}</span>
+                            <span className="font-semibold text-foreground">{review.username}</span>
                           </div>
                           <h3 
-                            className="text-lg font-bold cursor-pointer hover:text-primary"
+                            className="text-lg font-bold cursor-pointer hover:text-primary text-foreground"
                             onClick={() => onNavigate('movie', { id: review.movieId })}
                           >
                             {review.movieTitle}
@@ -147,13 +147,13 @@ export function HomePage({ onNavigate }) {
                               className={`h-4 w-4 ${
                                 i < review.rating
                                   ? 'fill-yellow-400 text-yellow-400'
-                                  : 'text-gray-300'
+                                  : 'text-muted-foreground/30'
                               }`}
                             />
                           ))}
                         </div>
                       </div>
-                      <p className="font-semibold mb-2">{review.title}</p>
+                      <p className="font-semibold mb-2 text-foreground">{review.title}</p>
                       <p className="text-muted-foreground text-sm mb-3">{review.content}</p>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span>{review.createdAt}</span>
