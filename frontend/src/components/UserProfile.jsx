@@ -1,25 +1,97 @@
-import { useState } from 'react';
-import { Star, MapPin, Calendar, Settings } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Star, Settings } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
-import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { mockUsers, mockReviews, currentUser } from '../lib/mockData';
+import { mockUsers, mockReviews } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
+const API_URL = 'http://localhost:8080/api';
 
 export function UserProfile({ userId, onNavigate }) {
-  const isOwnProfile = !userId || userId === currentUser.id;
-  const user = isOwnProfile ? currentUser : mockUsers.find((u) => u.id === userId) || currentUser;
-  
-  const [isFollowing, setIsFollowing] = useState(user.isFollowing || false);
-  const userReviews = mockReviews.filter((r) => r.userId === user.id);
+  // If no userId prop → viewing own profile
+  const isOwnProfile = !userId;
 
-  const handleFollowToggle = () => {
-    setIsFollowing(!isFollowing);
-  };
+  // ── State ──────────────────────────────────────────────────────────────────
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [isFollowing, setIsFollowing] = useState(false);
 
+  // Reviews stay on mock until the reviews API is built
+  const userReviews = user
+    ? mockReviews.filter((r) => r.userId === userId)
+    : [];
+
+  // ── Fetch profile on mount ─────────────────────────────────────────────────
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        if (isOwnProfile) {
+          // Own profile — requires JWT
+          const token = localStorage.getItem('token');
+          const res = await fetch(`${API_URL}/profile/me`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (!res.ok) throw new Error('Failed to load profile');
+          const data = await res.json();
+          // Map API response → shape the UI expects
+          setUser({
+            id: data.id,
+            name: data.fullName,
+            username: data.username,
+            email: data.email,
+            bio: data.bio || '',
+            avatar: data.avatarUrl || '',
+            reviewCount: data.reviewCount,
+            followers: data.followerCount,
+            following: data.followingCount,
+            isOwnProfile: true,
+          });
+        } else {
+          // Someone else's profile — still mock until user search API exists
+          const mockUser = mockUsers.find((u) => u.id === userId);
+          if (mockUser) {
+            setUser({ ...mockUser, isOwnProfile: false });
+            setIsFollowing(mockUser.isFollowing || false);
+          } else {
+            setError('User not found');
+          }
+        }
+      } catch (err) {
+        setError('Could not load profile. Is the backend running?');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [userId, isOwnProfile]);
+
+  const handleFollowToggle = () => setIsFollowing((prev) => !prev);
+
+  // ── Loading ────────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading profile...</p>
+      </div>
+    );
+  }
+
+  // ── Error ──────────────────────────────────────────────────────────────────
+  if (error || !user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">{error || 'User not found'}</p>
+      </div>
+    );
+  }
+
+  // ── UI (unchanged) ─────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
       {/* Profile Header */}
@@ -59,14 +131,14 @@ export function UserProfile({ userId, onNavigate }) {
                   <p className="text-2xl font-bold text-foreground">{user.reviewCount}</p>
                   <p className="text-sm text-muted-foreground">Reviews</p>
                 </div>
-                <div 
+                <div
                   className="cursor-pointer hover:opacity-80"
                   onClick={() => onNavigate('followers', { userId: user.id })}
                 >
                   <p className="text-2xl font-bold text-foreground">{user.followers}</p>
                   <p className="text-sm text-muted-foreground">Followers</p>
                 </div>
-                <div 
+                <div
                   className="cursor-pointer hover:opacity-80"
                   onClick={() => onNavigate('following', { userId: user.id })}
                 >
@@ -102,7 +174,7 @@ export function UserProfile({ userId, onNavigate }) {
                       />
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
-                          <h3 
+                          <h3
                             className="text-xl font-bold cursor-pointer hover:text-primary text-foreground"
                             onClick={() => onNavigate('movie', { id: review.movieId })}
                           >
@@ -137,7 +209,9 @@ export function UserProfile({ userId, onNavigate }) {
               <Card>
                 <CardContent className="p-12 text-center">
                   <p className="text-muted-foreground mb-4">
-                    {isOwnProfile ? "You haven't written any reviews yet" : `${user.name} hasn't written any reviews yet`}
+                    {isOwnProfile
+                      ? "You haven't written any reviews yet"
+                      : `${user.name} hasn't written any reviews yet`}
                   </p>
                   {isOwnProfile && (
                     <Button onClick={() => onNavigate('browse')}>
@@ -153,7 +227,9 @@ export function UserProfile({ userId, onNavigate }) {
             <Card>
               <CardContent className="p-12 text-center">
                 <p className="text-muted-foreground">
-                  {isOwnProfile ? "You haven't added any favorites yet" : `${user.name} hasn't added any favorites yet`}
+                  {isOwnProfile
+                    ? "You haven't added any favorites yet"
+                    : `${user.name} hasn't added any favorites yet`}
                 </p>
               </CardContent>
             </Card>
