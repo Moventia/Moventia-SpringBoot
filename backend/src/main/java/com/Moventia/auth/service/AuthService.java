@@ -49,12 +49,13 @@ public class AuthService {
         String hashedPassword = passwordEncoder.encode(req.getPassword());
 
         // 3. Persist the new user
-        User user = new User(
-                req.getFullName(),
-                req.getUsername(),
-                req.getEmail(),
-                hashedPassword
-        );
+        // NEW — builder, safe to add new fields anytime
+        User user = User.builder()
+                .fullName(req.getFullName())
+                .username(req.getUsername())
+                .email(req.getEmail())
+                .password(passwordEncoder.encode(req.getPassword()))
+                .build();
         userRepository.save(user);
 
         // 4. Issue a JWT and return a safe response (no password hash exposed)
@@ -77,9 +78,9 @@ public class AuthService {
             throw new BadCredentialsException("Invalid email or password.");
         }
 
-        if (!user.isActive()) {
-            throw new BadCredentialsException("Account is disabled.");
-        }
+//        if (!user.isActive()) {
+//            throw new BadCredentialsException("Account is disabled.");
+//        }
 
         // 3. Issue JWT
         String token = jwtUtils.generateToken(user.getEmail());
