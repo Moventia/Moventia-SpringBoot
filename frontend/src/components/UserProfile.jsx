@@ -4,12 +4,17 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { mockUsers, mockReviews } from '../lib/mockData';
+import { mockReviews } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { EditProfileModal } from './EditProfileModal';
+import { useParams } from 'react-router-dom';
+import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
 const API_URL = 'http://localhost:8080/api';
 
-export function UserProfile({ userId, onNavigate }) {
+export function UserProfile({ onProfileUpdate }) {
+  const { userId } = useParams();
+  const navigate = useNavigate();
   // If no userId prop → viewing own profile
   const isOwnProfile = !userId;
 
@@ -18,6 +23,8 @@ export function UserProfile({ userId, onNavigate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Reviews stay on mock until the reviews API is built
   const userReviews = user
@@ -30,15 +37,14 @@ export function UserProfile({ userId, onNavigate }) {
       setLoading(true);
       setError('');
       try {
+        const token = localStorage.getItem('token');
         if (isOwnProfile) {
           // Own profile — requires JWT
-          const token = localStorage.getItem('token');
           const res = await fetch(`${API_URL}/profile/me`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           if (!res.ok) throw new Error('Failed to load profile');
           const data = await res.json();
-          // Map API response → shape the UI expects
           setUser({
             id: data.id,
             name: data.fullName,
@@ -52,14 +58,26 @@ export function UserProfile({ userId, onNavigate }) {
             isOwnProfile: true,
           });
         } else {
-          // Someone else's profile — still mock until user search API exists
-          const mockUser = mockUsers.find((u) => u.id === userId);
-          if (mockUser) {
-            setUser({ ...mockUser, isOwnProfile: false });
-            setIsFollowing(mockUser.isFollowing || false);
-          } else {
-            setError('User not found');
+          // Other user's profile — call GET /api/profile/{username}
+          const headers = {};
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
           }
+          const res = await fetch(`${API_URL}/profile/${encodeURIComponent(userId)}`, { headers });
+          if (!res.ok) throw new Error('User not found');
+          const data = await res.json();
+          setUser({
+            id: data.id,
+            name: data.fullName,
+            username: data.username,
+            bio: data.bio || '',
+            avatar: data.avatarUrl || '',
+            reviewCount: data.reviewCount,
+            followers: data.followerCount,
+            following: data.followingCount,
+            isOwnProfile: data.isOwnProfile || false,
+          });
+          setIsFollowing(data.isFollowedByMe || false);
         }
       } catch (err) {
         setError('Could not load profile. Is the backend running?');
@@ -71,7 +89,43 @@ export function UserProfile({ userId, onNavigate }) {
     fetchProfile();
   }, [userId, isOwnProfile]);
 
-  const handleFollowToggle = () => setIsFollowing((prev) => !prev);
+  // ── Follow / Unfollow ─────────────────────────────────────────────────────
+  const handleFollowToggle = async () => {
+    if (!user || followLoading) return;
+    setFollowLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const method = isFollowing ? 'DELETE' : 'POST';
+      const res = await fetch(`${API_URL}/profile/${encodeURIComponent(user.username)}/follow`, {
+        method,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setIsFollowing(!isFollowing);
+        setUser((prev) => ({
+          ...prev,
+          followers: isFollowing ? Math.max(0, prev.followers - 1) : prev.followers + 1,
+        }));
+      }
+    } catch {
+      // silent
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  // ── Edit profile saved handler ─────────────────────────────────────────────
+  const handleEditSaved = (data) => {
+    setUser((prev) => ({
+      ...prev,
+      name: data.fullName,
+      bio: data.bio || '',
+      avatar: data.avatarUrl || '',
+    }));
+    setShowEditModal(false);
+    // Refresh nav bar user data
+    if (onProfileUpdate) onProfileUpdate();
+  };
 
   // ── Loading ────────────────────────────────────────────────────────────────
   if (loading) {
@@ -91,7 +145,7 @@ export function UserProfile({ userId, onNavigate }) {
     );
   }
 
-  // ── UI (unchanged) ─────────────────────────────────────────────────────────
+  // ── UI ──────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
       {/* Profile Header */}
@@ -110,14 +164,16 @@ export function UserProfile({ userId, onNavigate }) {
                     onClick={handleFollowToggle}
                     variant={isFollowing ? 'outline' : 'default'}
                     className={isFollowing ? 'border-foreground/30 text-foreground hover:bg-foreground/10' : ''}
+                    disabled={followLoading}
                   >
-                    {isFollowing ? 'Following' : 'Follow'}
+                    {followLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
                   </Button>
                 )}
                 {isOwnProfile && (
                   <Button
                     variant="outline"
                     className="border-foreground/30 text-foreground hover:bg-foreground/10"
+                    onClick={() => setShowEditModal(true)}
                   >
                     <Settings className="h-4 w-4 mr-2" />
                     Edit Profile
@@ -133,14 +189,14 @@ export function UserProfile({ userId, onNavigate }) {
                 </div>
                 <div
                   className="cursor-pointer hover:opacity-80"
-                  onClick={() => onNavigate('followers', { userId: user.id })}
+                  onClick={() => navigate(`/profile/${user.username}/followers`)}
                 >
                   <p className="text-2xl font-bold text-foreground">{user.followers}</p>
                   <p className="text-sm text-muted-foreground">Followers</p>
                 </div>
                 <div
                   className="cursor-pointer hover:opacity-80"
-                  onClick={() => onNavigate('following', { userId: user.id })}
+                  onClick={() => navigate(`/profile/${user.username}/following`)}
                 >
                   <p className="text-2xl font-bold text-foreground">{user.following}</p>
                   <p className="text-sm text-muted-foreground">Following</p>
@@ -170,13 +226,13 @@ export function UserProfile({ userId, onNavigate }) {
                         src={review.moviePoster}
                         alt={review.movieTitle}
                         className="w-24 h-36 object-cover rounded cursor-pointer"
-                        onClick={() => onNavigate('movie', { id: review.movieId })}
+                        onClick={() => navigate(`/movie/${review.movieId}`)}
                       />
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
                           <h3
                             className="text-xl font-bold cursor-pointer hover:text-primary text-foreground"
-                            onClick={() => onNavigate('movie', { id: review.movieId })}
+                            onClick={() => navigate(`/movie/${review.movieId}`)}
                           >
                             {review.movieTitle}
                           </h3>
@@ -214,7 +270,7 @@ export function UserProfile({ userId, onNavigate }) {
                       : `${user.name} hasn't written any reviews yet`}
                   </p>
                   {isOwnProfile && (
-                    <Button onClick={() => onNavigate('browse')}>
+                    <Button onClick={() => navigate('/browse')}>
                       Browse Movies to Review
                     </Button>
                   )}
@@ -244,6 +300,15 @@ export function UserProfile({ userId, onNavigate }) {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <EditProfileModal
+          user={user}
+          onClose={() => setShowEditModal(false)}
+          onSaved={handleEditSaved}
+        />
+      )}
     </div>
   );
 }

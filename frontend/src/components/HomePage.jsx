@@ -5,9 +5,10 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { mockMovies, mockReviews } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
-
-export function HomePage({ onNavigate, isLoggedIn }) {
+export function HomePage({ isLoggedIn }) {
+  const navigate = useNavigate();
   const featuredMovie = mockMovies[0];
   const trendingMovies = mockMovies.slice(0, 4);
   const recentReviews = mockReviews;
@@ -46,7 +47,7 @@ export function HomePage({ onNavigate, isLoggedIn }) {
             <div className="flex gap-3">
               <Button 
                 size="lg" 
-                onClick={() => onNavigate('movie', { id: featuredMovie.id })}
+                onClick={() => navigate(`/movie/${featuredMovie.id}`)}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 View Details
@@ -54,7 +55,7 @@ export function HomePage({ onNavigate, isLoggedIn }) {
               <Button 
                 size="lg" 
                 variant="outline"
-                onClick={() => onNavigate('write-review', { movieId: featuredMovie.id })}
+                onClick={() => navigate(`/movie/${featuredMovie.id}/review`)}
                 className="border-foreground/30 text-foreground hover:bg-foreground/10"
               >
                 Write Review
@@ -72,7 +73,7 @@ export function HomePage({ onNavigate, isLoggedIn }) {
               <TrendingUp className="h-6 w-6 text-primary" />
               <h2 className="text-3xl font-bold text-foreground">Trending Now</h2>
             </div>
-            <Button variant="ghost" onClick={() => onNavigate('browse')}>
+            <Button variant="ghost" onClick={() => navigate('/browse')}>
               View All
             </Button>
           </div>
@@ -81,7 +82,7 @@ export function HomePage({ onNavigate, isLoggedIn }) {
               <Card 
                 key={movie.id} 
                 className="overflow-hidden cursor-pointer hover:shadow-lg hover:shadow-primary/5 transition-all hover:border-primary/30"
-                onClick={() => onNavigate('movie', { id: movie.id })}
+                onClick={() => navigate(`/movie/${movie.id}`)}
               >
                 <div className="aspect-[2/3] relative">
                   <ImageWithFallback
@@ -125,7 +126,7 @@ export function HomePage({ onNavigate, isLoggedIn }) {
                         <div>
                           <div 
                             className="flex items-center gap-2 mb-2 cursor-pointer hover:underline"
-                            onClick={() => onNavigate('user-profile', { userId: review.userId })}
+                            onClick={() => navigate(`/profile/${review.userId}`)}
                           >
                             <Avatar className="h-8 w-8">
                               <AvatarImage src={review.userAvatar} alt={review.username} />
@@ -135,7 +136,7 @@ export function HomePage({ onNavigate, isLoggedIn }) {
                           </div>
                           <h3 
                             className="text-lg font-bold cursor-pointer hover:text-primary text-foreground"
-                            onClick={() => onNavigate('movie', { id: review.movieId })}
+                            onClick={() => navigate(`/movie/${review.movieId}`)}
                           >
                             {review.movieTitle}
                           </h3>
@@ -167,7 +168,7 @@ export function HomePage({ onNavigate, isLoggedIn }) {
             ))}
           </div>
           <div className="text-center mt-6">
-            <Button variant="outline" onClick={() => onNavigate('feed')}>
+            <Button variant="outline" onClick={() => navigate('/feed')}>
               View More Reviews
             </Button>
           </div>

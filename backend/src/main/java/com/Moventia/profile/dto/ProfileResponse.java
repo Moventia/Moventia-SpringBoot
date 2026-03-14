@@ -19,5 +19,11 @@ public class ProfileResponse {
     private int followerCount;
     private int followingCount;
     private int reviewCount;
+    
+    @com.fasterxml.jackson.annotation.JsonProperty("isOwnProfile")
     private boolean isOwnProfile;
+    
+    @com.fasterxml.jackson.annotation.JsonProperty("isFollowedByMe")
+    private boolean isFollowedByMe;
 }
+

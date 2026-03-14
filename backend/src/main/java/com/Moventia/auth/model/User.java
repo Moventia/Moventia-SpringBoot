@@ -37,8 +37,11 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
-    @Column
-    private String avatarUrl;
+    @Column(name = "avatar")
+    private byte[] avatar;
+
+    @Column(name = "avatar_content_type")
+    private String avatarContentType;
 
     @Builder.Default
     @Column(nullable = false)

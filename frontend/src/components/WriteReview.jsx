@@ -8,8 +8,14 @@ import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { mockMovies } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { useParams } from 'react-router-dom';
+import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
-export function WriteReview({ movieId, onNavigate }) {
+export function WriteReview() {
+  const { movieId: idParam } = useParams();
+  const navigate = useNavigate();
+  const movieId = parseInt(idParam, 10);
+
   const movie = movieId
     ? mockMovies.find((m) => m.id === movieId)
     : null;
@@ -23,7 +29,7 @@ export function WriteReview({ movieId, onNavigate }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     alert('Review submitted successfully!');
-    onNavigate('movie', { id: movieId });
+    navigate(`/movie/${movieId}`);
   };
 
   if (!movie) {
@@ -34,7 +40,7 @@ export function WriteReview({ movieId, onNavigate }) {
             <CardContent className="p-12 text-center">
               <p className="text-muted-foreground">Movie not found</p>
               <Button
-                onClick={() => onNavigate('browse')}
+                onClick={() => navigate('/browse')}
                 className="mt-4"
               >
                 Browse Movies
@@ -177,7 +183,7 @@ export function WriteReview({ movieId, onNavigate }) {
                       type="button"
                       variant="outline"
                       onClick={() =>
-                        onNavigate('movie', { id: movieId })
+                        navigate(`/movie/${movieId}`)
                       }
                     >
                       Cancel

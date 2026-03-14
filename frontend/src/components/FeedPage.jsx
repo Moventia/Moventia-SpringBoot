@@ -4,10 +4,10 @@ import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { mockReviews } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
-
-
-export function FeedPage({ onNavigate }) {
+export function FeedPage() {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 max-w-3xl">
@@ -26,7 +26,7 @@ export function FeedPage({ onNavigate }) {
                 <div className="flex items-center gap-3 mb-4">
                   <Avatar 
                     className="cursor-pointer"
-                    onClick={() => onNavigate('user-profile', { userId: review.userId })}
+                    onClick={() => navigate(`/profile/${review.userId}`)}
                   >
                     <AvatarImage src={review.userAvatar} alt={review.username} />
                     <AvatarFallback>{review.username[0]}</AvatarFallback>
@@ -34,7 +34,7 @@ export function FeedPage({ onNavigate }) {
                   <div className="flex-1">
                     <p 
                       className="font-semibold cursor-pointer hover:underline text-foreground"
-                      onClick={() => onNavigate('user-profile', { userId: review.userId })}
+                      onClick={() => navigate(`/profile/${review.userId}`)}
                     >
                       {review.username}
                     </p>
@@ -50,12 +50,12 @@ export function FeedPage({ onNavigate }) {
                     src={review.moviePoster}
                     alt={review.movieTitle}
                     className="w-24 h-36 object-cover rounded cursor-pointer"
-                    onClick={() => onNavigate('movie', { id: review.movieId })}
+                    onClick={() => navigate(`/movie/${review.movieId}`)}
                   />
                   <div className="flex-1">
                     <h3 
                       className="text-xl font-bold mb-2 cursor-pointer hover:text-primary text-foreground"
-                      onClick={() => onNavigate('movie', { id: review.movieId })}
+                      onClick={() => navigate(`/movie/${review.movieId}`)}
                     >
                       {review.movieTitle}
                     </h3>

@@ -6,10 +6,13 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
 import { mockMovies, mockReviews } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { useParams } from 'react-router-dom';
+import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
-
-
-export function MovieDetail({ movieId, onNavigate, isLoggedIn } ) {
+export function MovieDetail({ isLoggedIn } ) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const movieId = parseInt(id, 10);
   const movie = mockMovies.find((m) => m.id === movieId);
   const movieReviews = mockReviews.filter((r) => r.movieId === movieId);
 
@@ -63,7 +66,7 @@ export function MovieDetail({ movieId, onNavigate, isLoggedIn } ) {
               <div className="flex gap-2">
                 <Button 
                   size="lg"
-                  onClick={() => onNavigate('write-review', { movieId: movie.id })}
+                  onClick={() => navigate(`/movie/${movie.id}/review`)}
                 >
                   Write Review
                 </Button>
@@ -97,7 +100,7 @@ export function MovieDetail({ movieId, onNavigate, isLoggedIn } ) {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-foreground">Reviews ({movie.reviewCount})</h2>
-                  <Button onClick={() => onNavigate('write-review', { movieId: movie.id })}>
+                  <Button onClick={() => navigate(`/movie/${movie.id}/review`)}>
                     Write Review
                   </Button>
                 </div>
@@ -109,7 +112,7 @@ export function MovieDetail({ movieId, onNavigate, isLoggedIn } ) {
                         <div className="flex items-start gap-3 mb-3">
                           <Avatar 
                             className="cursor-pointer"
-                            onClick={() => onNavigate('user-profile', { userId: review.userId })}
+                            onClick={() => navigate(`/profile/${review.userId}`)}
                           >
                             <AvatarImage src={review.userAvatar} alt={review.username} />
                             <AvatarFallback>{review.username[0]}</AvatarFallback>
@@ -118,7 +121,7 @@ export function MovieDetail({ movieId, onNavigate, isLoggedIn } ) {
                             <div className="flex items-center justify-between mb-1">
                               <span 
                                 className="font-semibold cursor-pointer hover:underline text-foreground"
-                                onClick={() => onNavigate('user-profile', { userId: review.userId })}
+                                onClick={() => navigate(`/profile/${review.userId}`)}
                               >
                                 {review.username}
                               </span>
@@ -154,7 +157,7 @@ export function MovieDetail({ movieId, onNavigate, isLoggedIn } ) {
                 ) : (
                   <div className="text-center py-8">
                     <p className="text-muted-foreground mb-4">No reviews yet. Be the first to review!</p>
-                    <Button onClick={() => onNavigate('write-review', { movieId: movie.id })}>
+                    <Button onClick={() => navigate(`/movie/${movie.id}/review`)}>
                       Write the First Review
                     </Button>
                   </div>

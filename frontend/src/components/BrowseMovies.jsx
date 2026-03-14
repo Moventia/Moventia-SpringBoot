@@ -13,8 +13,10 @@ import {
 } from './ui/select';
 import { mockMovies } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
-export function BrowseMovies({ onNavigate }) {
+export function BrowseMovies() {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
@@ -119,7 +121,7 @@ export function BrowseMovies({ onNavigate }) {
             <Card
               key={movie.id}
               className="overflow-hidden cursor-pointer hover:shadow-lg hover:shadow-primary/5 transition-all hover:scale-105 hover:border-primary/30"
-              onClick={() => onNavigate('movie', { id: movie.id })}
+              onClick={() => navigate(`/movie/${movie.id}`)}
             >
               <div className="aspect-[2/3] relative">
                 <ImageWithFallback

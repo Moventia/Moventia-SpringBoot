@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Navigation } from './components/Navigation';
 import { HomePage } from './components/HomePage';
 import { BrowseMovies } from './components/BrowseMovies';
@@ -12,81 +13,125 @@ import { FollowersPage } from './components/FollowersPage';
 import { Chatbot } from './components/Chatbot';
 import { mockNotifications } from './lib/mockData';
 
+const API_URL = 'http://localhost:8080/api';
+
+// Simple protected route wrapper
+function ProtectedRoute({ isLoggedIn, children }) {
+  const location = useLocation();
+  if (!isLoggedIn) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  return children;
+}
+
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentPage, setCurrentPage] = useState('home');
-  const [pageData, setPageData] = useState({});
-
+  const [navUser, setNavUser] = useState(null);
+  // Just for global notification count badge
   const unreadNotifications = mockNotifications.filter(n => !n.read).length;
 
-  // Pages that require login
-  const protectedPages = ['profile', 'user-profile', 'feed', 'notifications', 'write-review', 'followers', 'following'];
-
-  const handleNavigate = (page, data) => {
-    // If trying to access protected page while not logged in, redirect to login
-    if (!isLoggedIn && protectedPages.includes(page)) {
-      setCurrentPage('login');
-      setPageData({ redirectTo: page, redirectData: data });
-      window.scrollTo(0, 0);
-      return;
+  // ── Fetch user profile from API ──────────────────────────────────────
+  const fetchNavUser = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/profile/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNavUser(data);
+      }
+    } catch {
+      // silent
     }
-    setCurrentPage(page);
-    setPageData(data || {});
-    window.scrollTo(0, 0);
   };
+
+  // ── On mount, restore session ─────────────────────────────────────────
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      setIsLoggedIn(true);
+      fetchNavUser();
+    }
+  }, []);
 
   const handleLogin = () => {
     setIsLoggedIn(true);
-    // If there was a redirect target, go there; otherwise go home
-    if (pageData.redirectTo) {
-      setCurrentPage(pageData.redirectTo);
-      setPageData(pageData.redirectData || {});
-    } else {
-      setCurrentPage('home');
-    }
+    fetchNavUser();
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
-    setCurrentPage('home');
+    setNavUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation
-        currentPage={currentPage}
-        onNavigate={handleNavigate}
         isLoggedIn={isLoggedIn}
         onLogout={handleLogout}
         notificationCount={unreadNotifications}
+        user={navUser}
       />
 
-      {currentPage === 'home' && <HomePage onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />}
-      {currentPage === 'browse' && <BrowseMovies onNavigate={handleNavigate} />}
-      {currentPage === 'movie' && pageData.id && (
-        <MovieDetail movieId={pageData.id} onNavigate={handleNavigate} isLoggedIn={isLoggedIn} />
-      )}
-      {currentPage === 'login' && (
-        <LoginPage onLogin={handleLogin} onCancel={() => handleNavigate('home')} />
-      )}
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/browse" element={<BrowseMovies />} />
+        <Route path="/movie/:id" element={<MovieDetail isLoggedIn={isLoggedIn} />} />
+        <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
 
-      {/* Protected pages — only render if logged in */}
-      {currentPage === 'profile' && isLoggedIn && <UserProfile onNavigate={handleNavigate} />}
-      {currentPage === 'user-profile' && isLoggedIn && (
-        <UserProfile userId={pageData.userId} onNavigate={handleNavigate} />
-      )}
-      {currentPage === 'feed' && isLoggedIn && <FeedPage onNavigate={handleNavigate} />}
-      {currentPage === 'notifications' && isLoggedIn && (
-        <NotificationsPage onNavigate={handleNavigate} />
-      )}
-      {currentPage === 'write-review' && isLoggedIn && (
-        <WriteReview movieId={pageData.movieId} onNavigate={handleNavigate} />
-      )}
-      {(currentPage === 'followers' || currentPage === 'following') && isLoggedIn && (
-        <FollowersPage userId={pageData.userId} onNavigate={handleNavigate} />
-      )}
+        {/* Protected Routes */}
+        <Route path="/profile" element={
+          <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <UserProfile onProfileUpdate={fetchNavUser} />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/profile/:userId" element={
+          <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <UserProfile />
+          </ProtectedRoute>
+        } />
 
-      {/* Chatbot only visible when logged in */}
+        <Route path="/profile/:userId/followers" element={
+          <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <FollowersPage tab="followers" />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/profile/:userId/following" element={
+          <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <FollowersPage tab="following" />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/feed" element={
+          <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <FeedPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/notifications" element={
+          <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <NotificationsPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/movie/:id/review" element={
+          <ProtectedRoute isLoggedIn={isLoggedIn}>
+            <WriteReview />
+          </ProtectedRoute>
+        } />
+
+        {/* Catch-all route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      {/* Chatbot overlay */}
       {isLoggedIn && <Chatbot />}
     </div>
   );
