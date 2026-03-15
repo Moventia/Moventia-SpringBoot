@@ -64,14 +64,15 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/movies/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/profile/search").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/profile/{username}").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/profile/{username}/avatar").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/profile/{username}/followers").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/profile/{username}/following").permitAll()
-                        // Everything else requires a valid JWT
                         .anyRequest().authenticated()
                 )
+
 
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
