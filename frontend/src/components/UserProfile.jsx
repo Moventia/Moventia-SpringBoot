@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Star, Settings } from 'lucide-react';
+import { Star, Settings, Trash2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { mockReviews } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EditProfileModal } from './EditProfileModal';
 import { useParams } from 'react-router-dom';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
 const API_URL = 'http://localhost:8080/api';
+
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('token')}`
+});
 
 export function UserProfile({ onProfileUpdate }) {
   const { userId } = useParams();
@@ -26,10 +30,10 @@ export function UserProfile({ onProfileUpdate }) {
   const [followLoading, setFollowLoading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  // Reviews stay on mock until the reviews API is built
-  const userReviews = user
-    ? mockReviews.filter((r) => r.userId === userId)
-    : [];
+  // Reviews state
+  const [userReviews, setUserReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState(null);
 
   // ── Fetch profile on mount ─────────────────────────────────────────────────
   useEffect(() => {
@@ -88,6 +92,47 @@ export function UserProfile({ onProfileUpdate }) {
 
     fetchProfile();
   }, [userId, isOwnProfile]);
+
+  // ── Fetch reviews when user is loaded ─────────────────────────────────────
+  useEffect(() => {
+    if (!user?.username) return;
+
+    const fetchUserReviews = async () => {
+      try {
+        setReviewsLoading(true);
+        setReviewsError(null);
+        const headers = {};
+        const token = localStorage.getItem('token');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        const res = await fetch(`${API_URL}/reviews/user/${encodeURIComponent(user.username)}`, { headers });
+        if (!res.ok) throw new Error('Failed to fetch reviews');
+        const data = await res.json();
+        setUserReviews(data);
+      } catch (err) {
+        setReviewsError(err.message);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
+    fetchUserReviews();
+  }, [user?.username]);
+
+  // ── Delete review ─────────────────────────────────────────────────────────
+  const handleDeleteReview = async (reviewId) => {
+    try {
+      const res = await fetch(`${API_URL}/reviews/${reviewId}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to delete review');
+      setUserReviews((prev) => prev.filter((r) => r.id !== reviewId));
+    } catch {
+      // silent
+    }
+  };
 
   // ── Follow / Unfollow ─────────────────────────────────────────────────────
   const handleFollowToggle = async () => {
@@ -217,44 +262,67 @@ export function UserProfile({ onProfileUpdate }) {
           </TabsList>
 
           <TabsContent value="reviews" className="space-y-4">
-            {userReviews.length > 0 ? (
+            {reviewsLoading && (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading reviews...</p>
+              </div>
+            )}
+
+            {reviewsError && (
+              <div className="text-center py-8">
+                <p className="text-destructive">Error: {reviewsError}</p>
+              </div>
+            )}
+
+            {!reviewsLoading && !reviewsError && userReviews.length > 0 ? (
               userReviews.map((review) => (
                 <Card key={review.id} className="hover:shadow-md hover:shadow-primary/5 transition-shadow hover:border-primary/30">
                   <CardContent className="p-6">
                     <div className="flex gap-4">
                       <ImageWithFallback
-                        src={review.moviePoster}
+                        src={review.moviePosterUrl}
                         alt={review.movieTitle}
                         className="w-24 h-36 object-cover rounded cursor-pointer"
-                        onClick={() => navigate(`/movie/${review.movieId}`)}
+                        onClick={() => navigate(`/movie/${review.tmdbId}`)}
                       />
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-2">
                           <h3
                             className="text-xl font-bold cursor-pointer hover:text-primary text-foreground"
-                            onClick={() => navigate(`/movie/${review.movieId}`)}
+                            onClick={() => navigate(`/movie/${review.tmdbId}`)}
                           >
                             {review.movieTitle}
                           </h3>
-                          <div className="flex items-center gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < review.rating
-                                    ? 'fill-yellow-400 text-yellow-400'
-                                    : 'text-muted-foreground/30'
-                                }`}
-                              />
-                            ))}
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-4 w-4 ${
+                                    i < review.rating
+                                      ? 'fill-yellow-400 text-yellow-400'
+                                      : 'text-muted-foreground/30'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            {review.isOwnReview && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 text-destructive hover:text-destructive"
+                                onClick={() => handleDeleteReview(review.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                         <p className="font-semibold mb-2 text-foreground">{review.title}</p>
                         <p className="text-muted-foreground text-sm mb-3">{review.content}</p>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span>{review.createdAt}</span>
-                          <span>{review.likes} likes</span>
-                          <span>{review.comments} comments</span>
+                          <span>{review.likeCount} likes</span>
                         </div>
                       </div>
                     </div>
@@ -262,20 +330,22 @@ export function UserProfile({ onProfileUpdate }) {
                 </Card>
               ))
             ) : (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <p className="text-muted-foreground mb-4">
-                    {isOwnProfile
-                      ? "You haven't written any reviews yet"
-                      : `${user.name} hasn't written any reviews yet`}
-                  </p>
-                  {isOwnProfile && (
-                    <Button onClick={() => navigate('/browse')}>
-                      Browse Movies to Review
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+              !reviewsLoading && !reviewsError && (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <p className="text-muted-foreground mb-4">
+                      {isOwnProfile
+                        ? "You haven't written any reviews yet"
+                        : `${user.name} hasn't written any reviews yet`}
+                    </p>
+                    {isOwnProfile && (
+                      <Button onClick={() => navigate('/browse')}>
+                        Browse Movies to Review
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )
             )}
           </TabsContent>
 

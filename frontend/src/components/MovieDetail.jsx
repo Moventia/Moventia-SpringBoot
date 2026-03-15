@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Star, Calendar, Clock, Heart, Share2 } from 'lucide-react';
+import { Star, Calendar, Clock, Heart, Share2, Trash2, Eye } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Separator } from './ui/separator';
-import { mockReviews } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useParams } from 'react-router-dom';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
 const API_URL = 'http://localhost:8080/api';
+
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('token')}`
+});
 
 export function MovieDetail({ isLoggedIn }) {
   const { tmdbId } = useParams();
@@ -19,8 +23,11 @@ export function MovieDetail({ isLoggedIn }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Reviews stay mock for now
-  const movieReviews = mockReviews.filter((r) => r.movieId === tmdbId);
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState(null);
+  const [revealedSpoilers, setRevealedSpoilers] = useState(new Set());
 
   useEffect(() => {
     const fetchMovie = async () => {
@@ -39,6 +46,88 @@ export function MovieDetail({ isLoggedIn }) {
     };
     fetchMovie();
   }, [tmdbId]);
+
+  // Fetch reviews after movie loads
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        setReviewsLoading(true);
+        setReviewsError(null);
+        const headers = {};
+        const token = localStorage.getItem('token');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        const res = await fetch(`${API_URL}/reviews/movie/${tmdbId}`, { headers });
+        if (!res.ok) throw new Error('Failed to fetch reviews');
+        const data = await res.json();
+        setReviews(data);
+      } catch (err) {
+        setReviewsError(err.message);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+    if (tmdbId) fetchReviews();
+  }, [tmdbId]);
+
+  const handleLikeToggle = async (reviewId, currentlyLiked) => {
+    // Optimistic update
+    setReviews((prev) =>
+      prev.map((r) =>
+        r.id === reviewId
+          ? {
+              ...r,
+              isLikedByMe: !currentlyLiked,
+              likeCount: currentlyLiked ? r.likeCount - 1 : r.likeCount + 1,
+            }
+          : r
+      )
+    );
+    try {
+      const method = currentlyLiked ? 'DELETE' : 'POST';
+      const res = await fetch(`${API_URL}/reviews/${reviewId}/like`, {
+        method,
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed');
+    } catch {
+      // Revert on failure
+      setReviews((prev) =>
+        prev.map((r) =>
+          r.id === reviewId
+            ? {
+                ...r,
+                isLikedByMe: currentlyLiked,
+                likeCount: currentlyLiked ? r.likeCount + 1 : r.likeCount - 1,
+              }
+            : r
+        )
+      );
+    }
+  };
+
+  const handleDelete = async (reviewId) => {
+    try {
+      const res = await fetch(`${API_URL}/reviews/${reviewId}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to delete review');
+      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+    } catch {
+      // silent
+    }
+  };
+
+  const toggleSpoilerReveal = (reviewId) => {
+    setRevealedSpoilers((prev) => {
+      const next = new Set(prev);
+      if (next.has(reviewId)) next.delete(reviewId);
+      else next.add(reviewId);
+      return next;
+    });
+  };
 
   if (loading) {
     return (
@@ -139,54 +228,107 @@ export function MovieDetail({ isLoggedIn }) {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-foreground">Reviews ({movie.reviewCount})</h2>
+                  <h2 className="text-2xl font-bold text-foreground">Reviews ({reviews.length})</h2>
                   <Button onClick={() => navigate(`/movie/${movie.tmdbId}/review`)}>
                     Write Review
                   </Button>
                 </div>
 
-                {movieReviews.length > 0 ? (
+                {reviewsLoading && (
+                  <p className="text-muted-foreground text-center py-4">Loading reviews...</p>
+                )}
+
+                {reviewsError && (
+                  <p className="text-destructive text-center py-4">Error: {reviewsError}</p>
+                )}
+
+                {!reviewsLoading && !reviewsError && reviews.length > 0 ? (
                   <div className="space-y-6">
-                    {movieReviews.map((review) => (
+                    {reviews.map((review) => (
                       <div key={review.id}>
                         <div className="flex items-start gap-3 mb-3">
                           <Avatar 
                             className="cursor-pointer"
-                            onClick={() => navigate(`/profile/${review.userId}`)}
+                            onClick={() => navigate(`/profile/${review.username}`)}
                           >
-                            <AvatarImage src={review.userAvatar} alt={review.username} />
+                            <AvatarImage src={review.userAvatarUrl} alt={review.username} />
                             <AvatarFallback>{review.username[0]}</AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-1">
-                              <span 
-                                className="font-semibold cursor-pointer hover:underline text-foreground"
-                                onClick={() => navigate(`/profile/${review.userId}`)}
-                              >
-                                {review.username}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`h-4 w-4 ${
-                                      i < review.rating
-                                        ? 'fill-yellow-400 text-yellow-400'
-                                        : 'text-muted-foreground/30'
-                                    }`}
-                                  />
-                                ))}
+                              <div className="flex items-center gap-2">
+                                <span 
+                                  className="font-semibold cursor-pointer hover:underline text-foreground"
+                                  onClick={() => navigate(`/profile/${review.username}`)}
+                                >
+                                  {review.userFullName || review.username}
+                                </span>
+                                {review.hasSpoilers && (
+                                  <Badge variant="destructive" className="text-xs">Spoiler Warning</Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={`h-4 w-4 ${
+                                        i < review.rating
+                                          ? 'fill-yellow-400 text-yellow-400'
+                                          : 'text-muted-foreground/30'
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                {isLoggedIn && review.isOwnReview && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 px-2 text-destructive hover:text-destructive"
+                                    onClick={() => handleDelete(review.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             </div>
                             <p className="text-sm text-muted-foreground mb-2">{review.createdAt}</p>
                             <h3 className="font-semibold mb-2 text-foreground">{review.title}</h3>
-                            <p className="text-muted-foreground">{review.content}</p>
+                            {review.hasSpoilers && !revealedSpoilers.has(review.id) ? (
+                              <div className="relative">
+                                <p className="text-muted-foreground select-none" style={{ filter: 'blur(8px)' }}>{review.content}</p>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => toggleSpoilerReveal(review.id)}
+                                  >
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Reveal Spoiler
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-muted-foreground">{review.content}</p>
+                            )}
                             <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                              <Button variant="ghost" size="sm" className="h-8 px-2">
-                                <Heart className="h-4 w-4 mr-1" />
-                                {review.likes}
-                              </Button>
-                              <span>{review.comments} comments</span>
+                              {isLoggedIn && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-8 px-2 ${review.isLikedByMe ? 'text-red-500' : ''}`}
+                                  onClick={() => handleLikeToggle(review.id, review.isLikedByMe)}
+                                >
+                                  <Heart className={`h-4 w-4 mr-1 ${review.isLikedByMe ? 'fill-current' : ''}`} />
+                                  {review.likeCount}
+                                </Button>
+                              )}
+                              {!isLoggedIn && (
+                                <span className="flex items-center gap-1">
+                                  <Heart className="h-4 w-4" />
+                                  {review.likeCount}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -195,12 +337,14 @@ export function MovieDetail({ isLoggedIn }) {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground mb-4">No reviews yet. Be the first to review!</p>
-                    <Button onClick={() => navigate(`/movie/${movie.tmdbId}/review`)}>
-                      Write the First Review
-                    </Button>
-                  </div>
+                  !reviewsLoading && !reviewsError && (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground mb-4">No reviews yet. Be the first to review!</p>
+                      <Button onClick={() => navigate(`/movie/${movie.tmdbId}/review`)}>
+                        Write the First Review
+                      </Button>
+                    </div>
+                  )
                 )}
               </CardContent>
             </Card>

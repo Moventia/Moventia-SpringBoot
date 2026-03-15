@@ -12,9 +12,16 @@ import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
 const API_URL = 'http://localhost:8080/api';
 
+const authHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('token')}`
+});
+
 export function WriteReview() {
   const { tmdbId } = useParams();
   const navigate = useNavigate();
+
+  const isLoggedIn = !!localStorage.getItem('token');
 
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,6 +32,8 @@ export function WriteReview() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [hasSpoilers, setHasSpoilers] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   useEffect(() => {
     const fetchMovie = async () => {
@@ -44,11 +53,49 @@ export function WriteReview() {
     if (tmdbId) fetchMovie();
   }, [tmdbId]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert('Review submitted successfully!');
-    navigate(`/movie/${tmdbId}`);
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const res = await fetch(`${API_URL}/reviews`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          tmdbId: Number(tmdbId),
+          rating,
+          title,
+          content,
+          hasSpoilers,
+        }),
+      });
+      if (res.status === 409) {
+        setSubmitError('You have already reviewed this movie. Delete your existing review to write a new one.');
+        return;
+      }
+      if (!res.ok) throw new Error('Failed to submit review');
+      navigate(`/movie/${tmdbId}`);
+    } catch (err) {
+      setSubmitError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card>
+          <CardContent className="p-12 text-center">
+            <p className="text-muted-foreground mb-4">Please log in to write a review</p>
+            <Button onClick={() => navigate('/login')}>
+              Log In
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -125,6 +172,12 @@ export function WriteReview() {
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
 
+                  {submitError && (
+                    <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
+                      <p className="text-destructive text-sm">{submitError}</p>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label className="text-foreground">Rating *</Label>
                     <div className="flex gap-2">
@@ -179,8 +232,8 @@ export function WriteReview() {
                       rows={10}
                       required
                     />
-                    <p className="text-xs text-muted-foreground">
-                      {content.length} characters
+                    <p className={`text-xs ${content.length > 0 && content.length < 10 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {content.length} characters {content.length > 0 && content.length < 10 && '(minimum 10 characters required)'}
                     </p>
                   </div>
 
@@ -192,7 +245,8 @@ export function WriteReview() {
                           Contains Spoilers
                         </Label>
                         <p className="text-sm text-muted-foreground">
-                          Check this if your review reveals plot details
+                          Check this if your review reveals plot details.
+                          Your review content will be blurred for other readers until they choose to reveal it.
                         </p>
                       </div>
                     </div>
@@ -206,9 +260,9 @@ export function WriteReview() {
                   <div className="flex gap-3">
                     <Button
                       type="submit"
-                      disabled={rating === 0 || !title || !content}
+                      disabled={rating === 0 || !title || !content || content.length < 10 || submitting}
                     >
-                      Publish Review
+                      {submitting ? 'Submitting...' : 'Publish Review'}
                     </Button>
                     <Button
                       type="button"

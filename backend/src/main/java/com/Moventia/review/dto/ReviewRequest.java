@@ -21,5 +21,6 @@ public class ReviewRequest {
     @Size(min = 10, message = "Review must be at least 10 characters")
     private String content;
 
+    @com.fasterxml.jackson.annotation.JsonProperty("hasSpoilers")
     private boolean hasSpoilers;
 }

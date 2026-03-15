@@ -27,6 +27,7 @@ public class ReviewResponse {
     private int rating;
     private String title;
     private String content;
+    @com.fasterxml.jackson.annotation.JsonProperty("hasSpoilers")
     private boolean hasSpoilers;
     private int likeCount;
     private String createdAt;      // formatted: "March 14, 2026"
