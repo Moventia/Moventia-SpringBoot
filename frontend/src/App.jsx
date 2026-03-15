@@ -81,7 +81,7 @@ export default function App() {
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/browse" element={<BrowseMovies />} />
-        <Route path="/movie/:id" element={<MovieDetail isLoggedIn={isLoggedIn} />} />
+        <Route path="/movie/:tmdbId" element={<MovieDetail isLoggedIn={isLoggedIn} />} />
         <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
 
         {/* Protected Routes */}
@@ -121,7 +121,7 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        <Route path="/movie/:id/review" element={
+        <Route path="/movie/:tmdbId/review" element={
           <ProtectedRoute isLoggedIn={isLoggedIn}>
             <WriteReview />
           </ProtectedRoute>

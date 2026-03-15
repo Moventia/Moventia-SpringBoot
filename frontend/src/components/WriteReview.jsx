@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -6,19 +6,19 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Switch } from './ui/switch';
-import { mockMovies } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useParams } from 'react-router-dom';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
-export function WriteReview() {
-  const { movieId: idParam } = useParams();
-  const navigate = useNavigate();
-  const movieId = parseInt(idParam, 10);
+const API_URL = 'http://localhost:8080/api';
 
-  const movie = movieId
-    ? mockMovies.find((m) => m.id === movieId)
-    : null;
+export function WriteReview() {
+  const { tmdbId } = useParams();
+  const navigate = useNavigate();
+
+  const [movie, setMovie] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
@@ -26,11 +26,45 @@ export function WriteReview() {
   const [content, setContent] = useState('');
   const [hasSpoilers, setHasSpoilers] = useState(false);
 
+  useEffect(() => {
+    const fetchMovie = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch(`${API_URL}/movies/${tmdbId}`);
+        if (!res.ok) throw new Error('Failed to fetch movie details');
+        const data = await res.json();
+        setMovie(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (tmdbId) fetchMovie();
+  }, [tmdbId]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     alert('Review submitted successfully!');
-    navigate(`/movie/${movieId}`);
+    navigate(`/movie/${tmdbId}`);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground text-lg">Loading movie info...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-destructive text-lg">Error: {error}</p>
+      </div>
+    );
+  }
 
   if (!movie) {
     return (
@@ -69,7 +103,7 @@ export function WriteReview() {
             <Card>
               <CardContent className="p-4">
                 <ImageWithFallback
-                  src={movie.poster}
+                  src={movie.posterUrl}
                   alt={movie.title}
                   className="w-full aspect-[2/3] object-cover rounded mb-4"
                 />
@@ -77,10 +111,7 @@ export function WriteReview() {
                   {movie.title}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {movie.year} • {movie.genre.join(', ')}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Directed by {movie.director}
+                  {movie.releaseDate?.substring(0, 4)} • {movie.genres?.join(', ')}
                 </p>
               </CardContent>
             </Card>
@@ -183,7 +214,7 @@ export function WriteReview() {
                       type="button"
                       variant="outline"
                       onClick={() =>
-                        navigate(`/movie/${movieId}`)
+                        navigate(`/movie/${tmdbId}`)
                       }
                     >
                       Cancel

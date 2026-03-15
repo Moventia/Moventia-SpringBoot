@@ -1,17 +1,66 @@
+import { useState, useEffect } from 'react';
 import { Star, TrendingUp, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { mockMovies, mockReviews } from '../lib/mockData';
+import { mockReviews } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
+const API_URL = 'http://localhost:8080/api';
+
 export function HomePage({ isLoggedIn }) {
   const navigate = useNavigate();
-  const featuredMovie = mockMovies[0];
-  const trendingMovies = mockMovies.slice(0, 4);
+  const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const recentReviews = mockReviews;
+
+  useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const res = await fetch(`${API_URL}/movies/trending?page=1`);
+        if (!res.ok) throw new Error('Failed to fetch trending movies');
+        const data = await res.json();
+        setMovies(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrending();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground text-lg">Loading trending movies...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-destructive text-lg">Error: {error}</p>
+      </div>
+    );
+  }
+
+  const featuredMovie = movies[0];
+  const trendingMovies = movies.slice(0, 4);
+
+  if (!featuredMovie) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground text-lg">No trending movies available</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -19,9 +68,10 @@ export function HomePage({ isLoggedIn }) {
       <div className="relative h-[500px] bg-gradient-to-b from-[#1a1510] via-[#0f0d0a] to-background overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <ImageWithFallback
-            src={featuredMovie.poster}
+            src={featuredMovie.backdropUrl || featuredMovie.posterUrl}
             alt={featuredMovie.title}
             className="w-full h-full object-cover"
+            loading="lazy"
           />
         </div>
         <div className="relative container mx-auto px-4 h-full flex items-center">
@@ -31,23 +81,23 @@ export function HomePage({ isLoggedIn }) {
             <div className="flex items-center gap-4 mb-4">
               <div className="flex items-center gap-1">
                 <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                <span className="font-semibold">{featuredMovie.rating}</span>
+                <span className="font-semibold">{featuredMovie.tmdbRating}</span>
               </div>
-              <span>{featuredMovie.year}</span>
-              <span>{featuredMovie.duration}</span>
+              <span>{featuredMovie.releaseDate?.substring(0, 4)}</span>
+              <span>{featuredMovie.runtime}</span>
               <div className="flex gap-1">
-                {featuredMovie.genre.map((g) => (
+                {featuredMovie.genres?.map((g) => (
                   <Badge key={g} variant="outline" className="border-foreground/30 text-foreground/80">
                     {g}
                   </Badge>
                 ))}
               </div>
             </div>
-            <p className="text-lg mb-6 opacity-90">{featuredMovie.synopsis}</p>
+            <p className="text-lg mb-6 opacity-90">{featuredMovie.overview}</p>
             <div className="flex gap-3">
               <Button 
                 size="lg" 
-                onClick={() => navigate(`/movie/${featuredMovie.id}`)}
+                onClick={() => navigate(`/movie/${featuredMovie.tmdbId}`)}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 View Details
@@ -55,7 +105,7 @@ export function HomePage({ isLoggedIn }) {
               <Button 
                 size="lg" 
                 variant="outline"
-                onClick={() => navigate(`/movie/${featuredMovie.id}/review`)}
+                onClick={() => navigate(`/movie/${featuredMovie.tmdbId}/review`)}
                 className="border-foreground/30 text-foreground hover:bg-foreground/10"
               >
                 Write Review
@@ -80,24 +130,24 @@ export function HomePage({ isLoggedIn }) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {trendingMovies.map((movie) => (
               <Card 
-                key={movie.id} 
+                key={movie.tmdbId} 
                 className="overflow-hidden cursor-pointer hover:shadow-lg hover:shadow-primary/5 transition-all hover:border-primary/30"
-                onClick={() => navigate(`/movie/${movie.id}`)}
+                onClick={() => navigate(`/movie/${movie.tmdbId}`)}
               >
                 <div className="aspect-[2/3] relative">
                   <ImageWithFallback
-                    src={movie.poster}
+                    src={movie.posterUrl}
                     alt={movie.title}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute top-2 right-2 bg-black/80 text-white px-2 py-1 rounded flex items-center gap-1">
                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-semibold">{movie.rating}</span>
+                    <span className="text-sm font-semibold">{movie.tmdbRating}</span>
                   </div>
                 </div>
                 <CardContent className="p-4">
                   <h3 className="font-semibold mb-1 text-foreground">{movie.title}</h3>
-                  <p className="text-sm text-muted-foreground">{movie.year} • {movie.genre.join(', ')}</p>
+                  <p className="text-sm text-muted-foreground">{movie.releaseDate?.substring(0, 4)} • {movie.genres?.join(', ')}</p>
                   <p className="text-xs text-muted-foreground mt-1">{movie.reviewCount} reviews</p>
                 </CardContent>
               </Card>
