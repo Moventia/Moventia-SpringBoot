@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { mockReviews } from '../lib/mockData';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
@@ -15,7 +14,9 @@ export function HomePage({ isLoggedIn }) {
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const recentReviews = mockReviews;
+  const [recentReviews, setRecentReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsError, setReviewsError] = useState(null);
 
   useEffect(() => {
     const fetchTrending = async () => {
@@ -32,7 +33,27 @@ export function HomePage({ isLoggedIn }) {
         setLoading(false);
       }
     };
+
+    const fetchRecentReviews = async () => {
+      try {
+        setReviewsLoading(true);
+        setReviewsError(null);
+        const headers = {};
+        const token = localStorage.getItem('token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(`${API_URL}/reviews/recent?limit=5`, { headers });
+        if (!res.ok) throw new Error('Failed to fetch recent reviews');
+        const data = await res.json();
+        setRecentReviews(data);
+      } catch (err) {
+        setReviewsError(err.message);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+
     fetchTrending();
+    fetchRecentReviews();
   }, []);
 
   if (loading) {
@@ -161,62 +182,71 @@ export function HomePage({ isLoggedIn }) {
             <Clock className="h-6 w-6 text-primary" />
             <h2 className="text-3xl font-bold text-foreground">Recent Reviews</h2>
           </div>
-          <div className="space-y-4">
-            {recentReviews.map((review) => (
-              <Card key={review.id} className="hover:shadow-md hover:shadow-primary/5 transition-shadow hover:border-primary/30">
-                <CardContent className="p-6">
-                  <div className="flex gap-4">
-                    <ImageWithFallback
-                      src={review.moviePoster}
-                      alt={review.movieTitle}
-                      className="w-24 h-36 object-cover rounded"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <div 
-                            className="flex items-center gap-2 mb-2 cursor-pointer hover:underline"
-                            onClick={() => navigate(`/profile/${review.userId}`)}
-                          >
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={review.userAvatar} alt={review.username} />
-                              <AvatarFallback>{review.username[0]}</AvatarFallback>
-                            </Avatar>
-                            <span className="font-semibold text-foreground">{review.username}</span>
+
+          {reviewsLoading ? (
+            <p className="text-muted-foreground text-center py-8">Loading recent reviews...</p>
+          ) : reviewsError ? (
+            <p className="text-destructive text-center py-8">Error: {reviewsError}</p>
+          ) : recentReviews.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">No reviews yet. Be the first to share your thoughts!</p>
+          ) : (
+            <div className="space-y-4">
+              {recentReviews.map((review) => (
+                <Card key={review.id} className="hover:shadow-md hover:shadow-primary/5 transition-shadow hover:border-primary/30">
+                  <CardContent className="p-6">
+                    <div className="flex gap-4">
+                      <ImageWithFallback
+                        src={review.moviePosterUrl}
+                        alt={review.movieTitle}
+                        className="w-24 h-36 object-cover rounded"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div 
+                              className="flex items-center gap-2 mb-2 cursor-pointer hover:underline"
+                              onClick={() => navigate(`/profile/${review.username}`)}
+                            >
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={review.userAvatarUrl} alt={review.username} />
+                                <AvatarFallback>{review.username[0]}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-semibold text-foreground">{review.username}</span>
+                            </div>
+                            <h3 
+                              className="text-lg font-bold cursor-pointer hover:text-primary text-foreground"
+                              onClick={() => navigate(`/movie/${review.tmdbId}`)}
+                            >
+                              {review.movieTitle}
+                            </h3>
                           </div>
-                          <h3 
-                            className="text-lg font-bold cursor-pointer hover:text-primary text-foreground"
-                            onClick={() => navigate(`/movie/${review.movieId}`)}
-                          >
-                            {review.movieTitle}
-                          </h3>
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-4 w-4 ${
+                                  i < review.rating
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-muted-foreground/30'
+                                }`}
+                              />
+                            ))}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${
-                                i < review.rating
-                                  ? 'fill-yellow-400 text-yellow-400'
-                                  : 'text-muted-foreground/30'
-                              }`}
-                            />
-                          ))}
+                        <p className="font-semibold mb-2 text-foreground">{review.title}</p>
+                        <p className="text-muted-foreground text-sm mb-3">{review.content}</p>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{review.createdAt}</span>
+                          <span>{review.likeCount} likes</span>
                         </div>
-                      </div>
-                      <p className="font-semibold mb-2 text-foreground">{review.title}</p>
-                      <p className="text-muted-foreground text-sm mb-3">{review.content}</p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>{review.createdAt}</span>
-                        <span>{review.likes} likes</span>
-                        <span>{review.comments} comments</span>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
           <div className="text-center mt-6">
             <Button variant="outline" onClick={() => navigate('/feed')}>
               View More Reviews

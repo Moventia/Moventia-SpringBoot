@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,13 +43,42 @@ public class MovieService {
 
     // ── GET /api/movies/{tmdbId} — movie detail page ─────────────────────────
     public MovieResponse getMovieDetail(Integer tmdbId) {
-        // Always fetch full details from TMDB for detail page (genres, runtime etc)
-        // but ensure it's saved in our DB
-        TmdbMovieResponse tmdbData = tmdbClient.fetchMovieById(tmdbId);
-        Movie movie = movieRepository.findByTmdbId(tmdbId)
-                .orElseGet(() -> movieRepository.save(mapToEntity(tmdbData)));
+        // Check DB first
+        Optional<Movie> existing = movieRepository.findByTmdbId(tmdbId);
 
-        return buildResponse(movie, tmdbData);
+        if (existing.isPresent()) {
+            // Movie in DB — build response from DB only, no TMDB call
+            return buildResponseFromEntity(existing.get());
+        }
+
+        // Not in DB — must call TMDB
+        TmdbMovieResponse tmdbData = tmdbClient.fetchMovieById(tmdbId);
+        Movie saved = movieRepository.save(mapToEntity(tmdbData));
+        return buildResponseFromEntity(saved);
+    }
+
+    private MovieResponse buildResponseFromEntity(Movie movie) {
+        List<String> genres = movie.getGenres() != null
+                ? List.of(movie.getGenres().split(","))
+                : null;
+
+        return MovieResponse.builder()
+                .id(movie.getId())
+                .tmdbId(movie.getTmdbId())
+                .title(movie.getTitle())
+                .overview(movie.getOverview())
+                .posterUrl(movie.getPosterPath() != null
+                        ? imageBaseUrl + movie.getPosterPath() : null)
+                .backdropUrl(movie.getBackdropPath() != null
+                        ? imageBaseUrl + movie.getBackdropPath() : null)
+                .releaseDate(movie.getReleaseDate())
+                .originalLanguage(movie.getOriginalLanguage())
+                .tmdbRating(movie.getTmdbRating())
+                .runtime(movie.getRuntime())
+                .genres(genres)
+                .reviewCount(movie.getReviewCount())
+                .averageRating(movie.getAverageRating())
+                .build();
     }
 
     // ── GET /api/movies/trending ─────────────────────────────────────────────
@@ -80,6 +110,19 @@ public class MovieService {
 
     // Save only the fields we need for FK relationships and list display
     private Movie mapToEntity(TmdbMovieResponse tmdb) {
+        String genres = tmdb.getGenres() != null
+                ? tmdb.getGenres().stream()
+                .map(TmdbMovieResponse.Genre::getName)
+                .collect(Collectors.joining(","))
+                : null;
+
+        String runtime = null;
+        if (tmdb.getRuntime() != null && tmdb.getRuntime() > 0) {
+            int hours = tmdb.getRuntime() / 60;
+            int mins = tmdb.getRuntime() % 60;
+            runtime = (hours > 0 ? hours + "h " : "") + mins + "m";
+        }
+
         return Movie.builder()
                 .tmdbId(tmdb.getId())
                 .title(tmdb.getTitle())
@@ -89,6 +132,8 @@ public class MovieService {
                 .releaseDate(tmdb.getReleaseDate())
                 .originalLanguage(tmdb.getOriginalLanguage())
                 .tmdbRating(tmdb.getVoteAverage())
+                .genres(genres)
+                .runtime(runtime)
                 .build();
     }
 

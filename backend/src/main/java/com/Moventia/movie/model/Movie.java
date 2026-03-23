@@ -43,4 +43,9 @@ public class Movie {
     @Builder.Default
     @Column(nullable = false, updatable = false)
     private LocalDateTime savedAt = LocalDateTime.now();
+
+    // Movie.java — add these two fields
+
+    private String genres;    // store as comma separated "Action,Sci-Fi"
+    private String runtime;   // store formatted "2h 28m"
 }

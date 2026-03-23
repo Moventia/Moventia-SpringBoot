@@ -84,6 +84,16 @@ public class ReviewService {
         return buildResponse(review, user, false, false);
     }
 
+    public List<ReviewResponse> getRecentReviews(int limit, String requestingEmail) {
+        Pageable pageable = PageRequest.of(0, limit);
+        String username = getUsernameFromEmail(requestingEmail);
+        return reviewRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .getContent()
+                .stream()
+                .map(r -> buildResponseWithContext(r, username))
+                .collect(Collectors.toList());
+    }
+
     // ── GET /api/reviews/movie/{tmdbId} ──────────────────────────────────────
     public List<ReviewResponse> getMovieReviews(Integer tmdbId, String requestingEmail) {
         List<Review> reviews = reviewRepository.findByMovieTmdbIdOrderByCreatedAtDesc(tmdbId);

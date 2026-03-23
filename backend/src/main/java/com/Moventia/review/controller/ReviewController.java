@@ -22,6 +22,16 @@ public class ReviewController {
         this.reviewService = reviewService;
     }
 
+    // GET /api/reviews/recent?limit=5
+    @GetMapping("/recent")
+    public ResponseEntity<List<ReviewResponse>> getRecentReviews(
+            @RequestParam(defaultValue = "5") int limit,
+            Authentication authentication
+    ) {
+        String email = authentication != null ? authentication.getName() : null;
+        return ResponseEntity.ok(reviewService.getRecentReviews(limit, email));
+    }
+
     // ── POST /api/reviews ────────────────────────────────────────────────────
     @PostMapping
     public ResponseEntity<?> submitReview(

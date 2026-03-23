@@ -15,6 +15,9 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     // All reviews for a specific movie
     List<Review> findByMovieTmdbIdOrderByCreatedAtDesc(Integer tmdbId);
 
+    // Recent reviews tab. finds all the reviews done recently
+    Page<Review> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
     // All reviews by a specific user
     List<Review> findByUsernameOrderByCreatedAtDesc(String username);
 
