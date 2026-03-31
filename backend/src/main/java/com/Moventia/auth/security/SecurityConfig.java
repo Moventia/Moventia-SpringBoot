@@ -73,6 +73,7 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/profile/{username}/avatar").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/profile/{username}/followers").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/profile/{username}/following").permitAll()
+                        // /api/notifications/** intentionally falls through to anyRequest().authenticated()
                         .anyRequest().authenticated()
                 )
 

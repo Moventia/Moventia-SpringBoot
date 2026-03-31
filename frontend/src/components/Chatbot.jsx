@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { MessageCircle, X, Send } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback } from './ui/avatar';
 
-export function Chatbot() {
+export function Chatbot({ user }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
@@ -17,54 +17,106 @@ export function Chatbot() {
     }
   ]);
   const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [watchedMovies, setWatchedMovies] = useState([]);
+  const messagesEndRef = useRef(null);
+  const API_URL = 'http://localhost:8080/api';
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+  useEffect(() => {
+    if (user?.username) {
+      const fetchMovies = async () => {
+        try {
+          const token = localStorage.getItem('token');
+          const res = await fetch(`${API_URL}/reviews/user/${encodeURIComponent(user.username)}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const mapped = data.map(r => ({
+              title: r.movieTitle,
+              rating: r.rating,
+              reviewTitle: r.title
+            }));
+            setWatchedMovies(mapped);
+          }
+        } catch (error) {
+          console.error('Failed to fetch user movies for chatbot context', error);
+        }
+      };
+      fetchMovies();
+    }
+  }, [user?.username]);
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
+
+  const handleSend = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userText = inputValue;
     const userMessage = {
       id: Date.now().toString(),
-      text: inputValue,
+      text: userText,
       sender: 'user',
       timestamp: new Date()
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
+    setIsLoading(true);
 
-    setTimeout(() => {
-      const botResponse = getBotResponse(inputValue);
+    try {
+      const token = localStorage.getItem('token');
+      
+      const history = messages.map(m => ({
+        role: m.sender === 'bot' ? 'model' : 'user',
+        content: m.text
+      }));
 
+      const payload = {
+        message: userText,
+        history: history,
+        watchedMovies: watchedMovies
+      };
+
+      const res = await fetch(`${API_URL}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error('Failed to get chat response');
+      
+      const data = await res.json();
+      
       const botMessage = {
         id: (Date.now() + 1).toString(),
-        text: botResponse,
+        text: data.response,
         sender: 'bot',
         timestamp: new Date()
       };
-
+      
       setMessages((prev) => [...prev, botMessage]);
-    }, 1000);
-  };
-
-  const getBotResponse = (input) => {
-    const lowerInput = input.toLowerCase();
-
-    if (lowerInput.includes('recommend') || lowerInput.includes('suggestion')) {
-      return 'Based on popular ratings, I recommend checking out "Stellar Odyssey" - it\'s a fantastic sci-fi adventure with a 4.5 rating! Or if you prefer action, "The Last Stand" is getting rave reviews.';
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        text: "Sorry, I'm having trouble connecting to the server. Please try again later.",
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
-
-    if (lowerInput.includes('sci-fi') || lowerInput.includes('science fiction')) {
-      return 'Great choice! For sci-fi fans, I highly recommend "Stellar Odyssey" (2024). It has stunning visuals and an engaging story about discovering an ancient alien civilization.';
-    }
-
-    if (lowerInput.includes('horror')) {
-      return 'If you\'re into horror, you should definitely watch "Midnight Shadows" (2025). It\'s a psychological thriller that builds genuine suspense without relying on cheap jump scares.';
-    }
-
-    if (lowerInput.includes('rating') || lowerInput.includes('best')) {
-      return 'The highest-rated movie right now is "The Last Stand" with a 4.6 rating, followed by "Stellar Odyssey" at 4.5. Both are excellent choices!';
-    }
-
-    return 'I can help you find movies by genre, get personalized recommendations, or answer questions about specific films. What are you interested in?';
   };
 
   if (!isOpen) {
@@ -80,8 +132,8 @@ export function Chatbot() {
   }
 
   return (
-    <Card className="fixed bottom-6 right-6 w-96 h-[500px] shadow-2xl flex flex-col">
-      <div className="flex items-center justify-between p-4 border-b">
+    <Card className="fixed bottom-6 right-6 w-96 h-[500px] shadow-2xl flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between p-4 border-b shrink-0 bg-background/95 backdrop-blur z-10">
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8 bg-primary">
             <AvatarFallback className="text-white">AI</AvatarFallback>
@@ -96,8 +148,7 @@ export function Chatbot() {
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 [color-scheme:dark] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-foreground/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-foreground/20">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -108,20 +159,27 @@ export function Chatbot() {
               }`}
             >
               <div
-                className={`max-w-[80%] rounded-lg p-3 ${
+                className={`max-w-[80%] min-w-0 rounded-lg p-3 ${
                   message.sender === 'user'
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted'
                 }`}
               >
-                <p className="text-sm">{message.text}</p>
+                <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
               </div>
             </div>
           ))}
-        </div>
-      </ScrollArea>
+          {isLoading && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] rounded-lg p-3 bg-muted">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+      </div>
 
-      <div className="p-4 border-t">
+      <div className="p-4 border-t bg-background shrink-0 mt-auto">
         <div className="flex gap-2">
           <Input
             placeholder="Ask me anything..."
@@ -129,7 +187,7 @@ export function Chatbot() {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
           />
-          <Button onClick={handleSend} size="icon">
+          <Button onClick={handleSend} size="icon" disabled={isLoading}>
             <Send className="h-4 w-4" />
           </Button>
         </div>

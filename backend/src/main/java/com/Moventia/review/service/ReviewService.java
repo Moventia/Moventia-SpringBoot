@@ -7,6 +7,7 @@ import com.Moventia.movie.repository.MovieRepository;
 import com.Moventia.movie.service.MovieService;
 import com.Moventia.profile.model.Follow;
 import com.Moventia.profile.repository.FollowRepository;
+import com.Moventia.notification.service.NotificationService;
 import com.Moventia.review.dto.ReviewRequest;
 import com.Moventia.review.dto.ReviewResponse;
 import com.Moventia.review.model.Review;
@@ -32,6 +33,7 @@ public class ReviewService {
     private final MovieRepository movieRepository;
     private final MovieService movieService;
     private final FollowRepository followRepository;
+    private final NotificationService notificationService;
 
     private static final DateTimeFormatter DISPLAY_FORMAT =
             DateTimeFormatter.ofPattern("MMMM d, yyyy");
@@ -41,13 +43,15 @@ public class ReviewService {
                          UserRepository userRepository,
                          MovieRepository movieRepository,
                          MovieService movieService,
-                         FollowRepository followRepository) {
+                         FollowRepository followRepository,
+                         NotificationService notificationService) {
         this.reviewRepository = reviewRepository;
         this.reviewLikeRepository = reviewLikeRepository;
         this.userRepository = userRepository;
         this.movieRepository = movieRepository;
         this.movieService = movieService;
         this.followRepository = followRepository;
+        this.notificationService = notificationService;
     }
 
     // ── POST /api/reviews ────────────────────────────────────────────────────
@@ -152,6 +156,13 @@ public class ReviewService {
 
         review.setLikeCount(review.getLikeCount() + 1);
         reviewRepository.save(review);
+
+        // 🔔 Notify the review author (skip if user liked their own review)
+        notificationService.createReviewLikeNotification(
+                user.getUsername(),
+                review.getUsername(),
+                reviewId,
+                review.getMovie().getTitle());
     }
 
     // ── DELETE /api/reviews/{id}/like ────────────────────────────────────────

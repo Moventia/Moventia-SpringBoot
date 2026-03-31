@@ -6,6 +6,7 @@ import com.Moventia.profile.dto.ProfileResponse;
 import com.Moventia.profile.dto.UpdateProfileRequest;
 import com.Moventia.profile.model.Follow;
 import com.Moventia.profile.repository.FollowRepository;
+import com.Moventia.notification.service.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,10 +25,14 @@ public class ProfileService {
 
     private final UserRepository userRepository;
     private final FollowRepository followRepository;
+    private final NotificationService notificationService;
 
-    public ProfileService(UserRepository userRepository, FollowRepository followRepository) {
+    public ProfileService(UserRepository userRepository,
+                          FollowRepository followRepository,
+                          NotificationService notificationService) {
         this.userRepository = userRepository;
         this.followRepository = followRepository;
+        this.notificationService = notificationService;
     }
 
     // ── GET /api/profile/{username} ──────────────────────────────────────────
@@ -155,6 +160,10 @@ public class ProfileService {
         target.setFollowerCount(target.getFollowerCount() + 1);
         userRepository.save(follower);
         userRepository.save(target);
+
+        // 🔔 Notify the person being followed
+        notificationService.createFollowNotification(
+                follower.getUsername(), target.getUsername());
     }
 
     // ── DELETE /api/profile/{username}/follow ────────────────────────────────

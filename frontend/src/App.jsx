@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Navigation } from './components/Navigation';
 import { HomePage } from './components/HomePage';
@@ -11,7 +11,6 @@ import { NotificationsPage } from './components/NotificationsPage';
 import { WriteReview } from './components/WriteReview';
 import { FollowersPage } from './components/FollowersPage';
 import { Chatbot } from './components/Chatbot';
-import { mockNotifications } from './lib/mockData';
 
 const API_URL = 'http://localhost:8080/api';
 
@@ -27,8 +26,24 @@ function ProtectedRoute({ isLoggedIn, children }) {
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [navUser, setNavUser] = useState(null);
-  // Just for global notification count badge
-  const unreadNotifications = mockNotifications.filter(n => !n.read).length;
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  // Fetch unread notification count from API
+  const fetchNotificationCount = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/notifications/count`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadNotifications(data.unreadCount);
+      }
+    } catch {
+      // silent
+    }
+  }, []);
 
   // ── Fetch user profile from API ──────────────────────────────────────
   const fetchNavUser = async () => {
@@ -53,17 +68,20 @@ export default function App() {
     if (token) {
       setIsLoggedIn(true);
       fetchNavUser();
+      fetchNotificationCount();
     }
-  }, []);
+  }, [fetchNotificationCount]);
 
   const handleLogin = () => {
     setIsLoggedIn(true);
     fetchNavUser();
+    fetchNotificationCount();
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setNavUser(null);
+    setUnreadNotifications(0);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   };
@@ -117,7 +135,7 @@ export default function App() {
 
         <Route path="/notifications" element={
           <ProtectedRoute isLoggedIn={isLoggedIn}>
-            <NotificationsPage />
+            <NotificationsPage onNotificationsRead={fetchNotificationCount} />
           </ProtectedRoute>
         } />
 
@@ -132,7 +150,7 @@ export default function App() {
       </Routes>
 
       {/* Chatbot overlay */}
-      {isLoggedIn && <Chatbot />}
+      {isLoggedIn && <Chatbot user={navUser} />}
     </div>
   );
 }
