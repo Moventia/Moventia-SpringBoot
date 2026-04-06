@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Star, TrendingUp, Clock } from 'lucide-react';
+import { Star, TrendingUp, Clock, Play, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -18,6 +18,7 @@ export function HomePage({ isLoggedIn }) {
   const [recentReviews, setRecentReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [reviewsError, setReviewsError] = useState(null);
+  const [trailerOpen, setTrailerOpen] = useState(false);
 
   useEffect(() => {
     const fetchTrending = async () => {
@@ -74,7 +75,7 @@ export function HomePage({ isLoggedIn }) {
   }
 
   const featuredMovie = movies[0];
-  const trendingMovies = movies.slice(0, 4);
+  const trendingMovies = movies.slice(0, 6);
 
   if (!featuredMovie) {
     return (
@@ -86,8 +87,7 @@ export function HomePage({ isLoggedIn }) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="relative h-[500px] bg-gradient-to-b from-[#1a1510] via-[#0f0d0a] to-background overflow-hidden">
+      <div className="relative w-full max-h-[80vh] bg-gradient-to-b from-[#1a1510] via-[#0f0d0a] to-background overflow-hidden" style={{ aspectRatio: '2.4/1' }}>
         <div className="absolute inset-0 opacity-20">
           <ImageWithFallback
             src={(featuredMovie.backdropUrl || featuredMovie.posterUrl)?.replace('/w500/', '/original/')}
@@ -124,6 +124,18 @@ export function HomePage({ isLoggedIn }) {
               >
                 View Details
               </Button>
+
+              {featuredMovie.trailerUrl && (
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="border-foreground/30 text-foreground hover:bg-foreground/10"
+                  onClick={() => setTrailerOpen(true)}
+                >
+                  <Play className="mr-2 h-4 w-4" /> Watch Trailer
+                </Button>
+              )}
+
               <Button 
                 size="lg" 
                 variant="outline"
@@ -149,7 +161,7 @@ export function HomePage({ isLoggedIn }) {
               View All
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))' }}>
             {trendingMovies.map((movie) => (
               <MovieCard key={movie.tmdbId} movie={movie} isLoggedIn={isLoggedIn} />
             ))}
@@ -234,6 +246,46 @@ export function HomePage({ isLoggedIn }) {
           </div>
         </div>
       </div>
+
+      {/* Trailer Modal */}
+      {trailerOpen && featuredMovie.trailerUrl && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onClick={() => setTrailerOpen(false)}
+        >
+          <div
+            style={{
+              position: 'relative', width: '90%', maxWidth: '960px',
+              aspectRatio: '16/9', backgroundColor: '#000', borderRadius: '12px',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <iframe
+              src={featuredMovie.trailerUrl.replace('watch?v=', 'embed/') + '?autoplay=1'}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+            <button
+              onClick={() => setTrailerOpen(false)}
+              style={{
+                position: 'absolute', top: '12px', right: '12px',
+                background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%',
+                width: '36px', height: '36px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white',
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

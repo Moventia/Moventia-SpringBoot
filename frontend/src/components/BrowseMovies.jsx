@@ -149,7 +149,7 @@ export function BrowseMovies({ isLoggedIn }) {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))' }}>
               {movies.map((movie) => (
                 <MovieCard key={movie.tmdbId} movie={movie} isLoggedIn={isLoggedIn} />
               ))}

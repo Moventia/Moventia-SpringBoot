@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2, Sparkles } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
-import { ScrollArea } from './ui/scroll-area';
-import { Avatar, AvatarFallback } from './ui/avatar';
 
 export function Chatbot({ user }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,7 +17,7 @@ export function Chatbot({ user }) {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [watchedMovies, setWatchedMovies] = useState([]);
-  const messagesEndRef = useRef(null);
+  const scrollRef = useRef(null);
   const API_URL = 'http://localhost:8080/api';
 
   useEffect(() => {
@@ -48,11 +46,13 @@ export function Chatbot({ user }) {
   }, [user?.username]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
+    setTimeout(scrollToBottom, 50);
   }, [messages, isLoading]);
 
   const handleSend = async () => {
@@ -132,66 +132,115 @@ export function Chatbot({ user }) {
   }
 
   return (
-    <Card className="fixed bottom-6 right-6 w-96 h-[500px] shadow-2xl flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b shrink-0 bg-background/95 backdrop-blur z-10">
-        <div className="flex items-center gap-2">
-          <Avatar className="h-8 w-8 bg-primary">
-            <AvatarFallback className="text-white">AI</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-semibold">Movie Assistant</p>
-            <p className="text-xs text-muted-foreground">Online</p>
+    <>
+      <style>{`
+        .chatbot-scroll::-webkit-scrollbar {
+          width: 6px;
+        }
+        .chatbot-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .chatbot-scroll::-webkit-scrollbar-thumb {
+          background: rgba(196, 156, 85, 0.15);
+          border-radius: 999px;
+        }
+        .chatbot-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(196, 156, 85, 0.3);
+        }
+      `}</style>
+      <Card className="fixed bottom-6 right-6 w-96 shadow-2xl overflow-hidden" style={{ height: '520px', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b" style={{ flexShrink: 0, background: 'var(--background)' }}>
+          <div className="flex items-center gap-2">
+            <div style={{
+              width: '32px', height: '32px', borderRadius: '50%',
+              background: 'linear-gradient(135deg, #c49c55 0%, #a07830 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <Sparkles size={16} style={{ color: '#fff' }} />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground" style={{ fontSize: '0.9rem' }}>Movie Assistant</p>
+              <p className="text-muted-foreground" style={{ fontSize: '0.7rem' }}>Powered by Gemini</p>
+            </div>
           </div>
+          <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 [color-scheme:dark] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-foreground/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-foreground/20">
+        {/* Messages area */}
+        <div
+          ref={scrollRef}
+          className="chatbot-scroll"
+          style={{
+            flex: 1, overflowY: 'auto', padding: '1rem',
+            display: 'flex', flexDirection: 'column', gap: '0.75rem',
+          }}
+        >
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${
-                message.sender === 'user'
-                  ? 'justify-end'
-                  : 'justify-start'
-              }`}
+              style={{
+                display: 'flex',
+                justifyContent: message.sender === 'user' ? 'flex-end' : 'flex-start',
+              }}
             >
+              {message.sender === 'bot' && (
+                <div style={{
+                  width: '24px', height: '24px', borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #c49c55 0%, #a07830 100%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, marginRight: '8px', marginTop: '4px',
+                }}>
+                  <Sparkles size={12} style={{ color: '#fff' }} />
+                </div>
+              )}
               <div
-                className={`max-w-[80%] min-w-0 rounded-lg p-3 ${
+                className={`rounded-lg p-3 ${
                   message.sender === 'user'
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted'
                 }`}
+                style={{ maxWidth: '80%', minWidth: 0 }}
               >
-                <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+                <p className="text-sm" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{message.text}</p>
               </div>
             </div>
           ))}
           {isLoading && (
-            <div className="flex justify-start">
-              <div className="max-w-[80%] rounded-lg p-3 bg-muted">
+            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <div style={{
+                width: '24px', height: '24px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #c49c55 0%, #a07830 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, marginRight: '8px', marginTop: '4px',
+              }}>
+                <Sparkles size={12} style={{ color: '#fff' }} />
+              </div>
+              <div className="rounded-lg p-3 bg-muted">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
             </div>
           )}
-          <div ref={messagesEndRef} />
-      </div>
-
-      <div className="p-4 border-t bg-background shrink-0 mt-auto">
-        <div className="flex gap-2">
-          <Input
-            placeholder="Ask me anything..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-          />
-          <Button onClick={handleSend} size="icon" disabled={isLoading}>
-            <Send className="h-4 w-4" />
-          </Button>
         </div>
-      </div>
-    </Card>
+
+        {/* Input area */}
+        <div className="p-4 border-t" style={{ flexShrink: 0, background: 'var(--background)' }}>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Ask me anything about movies..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            />
+            <Button onClick={handleSend} size="icon" disabled={isLoading}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </>
   );
 }

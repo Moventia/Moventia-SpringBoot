@@ -75,6 +75,7 @@ public class MovieService {
                 .originalLanguage(movie.getOriginalLanguage())
                 .tmdbRating(movie.getTmdbRating())
                 .runtime(movie.getRuntime())
+                .trailerUrl(movie.getTrailerUrl())
                 .genres(genres)
                 .reviewCount(movie.getReviewCount())
                 .averageRating(movie.getAverageRating())
@@ -123,6 +124,21 @@ public class MovieService {
             runtime = (hours > 0 ? hours + "h " : "") + mins + "m";
         }
 
+        String trailerUrl = null;
+        if (tmdb.getVideos() != null && tmdb.getVideos().getResults() != null) {
+            Optional<TmdbMovieResponse.Video> trailer = tmdb.getVideos().getResults().stream()
+                    .filter(v -> "YouTube".equals(v.getSite()) && "Trailer".equals(v.getType()))
+                    .findFirst();
+            if (trailer.isEmpty()) {
+                trailer = tmdb.getVideos().getResults().stream()
+                        .filter(v -> "YouTube".equals(v.getSite()) && "Teaser".equals(v.getType()))
+                        .findFirst();
+            }
+            if (trailer.isPresent()) {
+                trailerUrl = "https://www.youtube.com/watch?v=" + trailer.get().getKey();
+            }
+        }
+
         return Movie.builder()
                 .tmdbId(tmdb.getId())
                 .title(tmdb.getTitle())
@@ -134,6 +150,7 @@ public class MovieService {
                 .tmdbRating(tmdb.getVoteAverage())
                 .genres(genres)
                 .runtime(runtime)
+                .trailerUrl(trailerUrl)
                 .build();
     }
 
@@ -161,6 +178,23 @@ public class MovieService {
                     .collect(Collectors.toList());
         }
 
+        String trailerUrl = null;
+        if (movie != null && movie.getTrailerUrl() != null) {
+            trailerUrl = movie.getTrailerUrl();
+        } else if (tmdb.getVideos() != null && tmdb.getVideos().getResults() != null) {
+            Optional<TmdbMovieResponse.Video> trailer = tmdb.getVideos().getResults().stream()
+                    .filter(v -> "YouTube".equals(v.getSite()) && "Trailer".equals(v.getType()))
+                    .findFirst();
+            if (trailer.isEmpty()) {
+                trailer = tmdb.getVideos().getResults().stream()
+                        .filter(v -> "YouTube".equals(v.getSite()) && "Teaser".equals(v.getType()))
+                        .findFirst();
+            }
+            if (trailer.isPresent()) {
+                trailerUrl = "https://www.youtube.com/watch?v=" + trailer.get().getKey();
+            }
+        }
+
         return MovieResponse.builder()
                 .id(dbId)
                 .tmdbId(tmdb.getId())
@@ -172,6 +206,7 @@ public class MovieService {
                 .originalLanguage(tmdb.getOriginalLanguage())
                 .tmdbRating(tmdb.getVoteAverage())
                 .runtime(runtime)
+                .trailerUrl(trailerUrl)
                 .genres(genres)
                 .reviewCount(reviewCount)
                 .averageRating(avgRating)

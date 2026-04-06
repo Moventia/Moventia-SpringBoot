@@ -42,10 +42,26 @@ public class TmdbMovieResponse {
 
     private List<Genre> genres;
 
+    private Videos videos;
+
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Genre {
         private Integer id;
         private String name;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Videos {
+        private List<Video> results;
+    }
+
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Video {
+        private String key;
+        private String site;
+        private String type;
     }
 }

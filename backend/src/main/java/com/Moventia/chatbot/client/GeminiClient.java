@@ -71,7 +71,7 @@ public class GeminiClient {
             "contents", contents,
             "generationConfig", Map.of(
                 "temperature", 0.8,
-                "maxOutputTokens", 500   // keep responses concise for chat
+                "maxOutputTokens", 2048
             )
         );
 

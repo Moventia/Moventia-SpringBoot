@@ -34,6 +34,7 @@ public class TmdbClient {
         String url = UriComponentsBuilder
                 .fromUriString(baseUrl + "/movie/" + tmdbId)
                 .queryParam("api_key", apiKey)
+                .queryParam("append_to_response", "videos")
                 .toUriString();
 
         return restTemplate.getForObject(url, TmdbMovieResponse.class);

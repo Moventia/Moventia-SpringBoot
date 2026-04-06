@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Star, Calendar, Clock, Heart, Share2, Trash2, Eye } from 'lucide-react';
+import { Star, Calendar, Clock, Heart, Share2, Trash2, Eye, Play, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
@@ -23,9 +23,11 @@ export function MovieDetail({ isLoggedIn }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [trailerOpen, setTrailerOpen] = useState(false);
 
   // Reviews state
   const [reviews, setReviews] = useState([]);
+  const [visibleReviewsCount, setVisibleReviewsCount] = useState(10);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsError, setReviewsError] = useState(null);
   const [revealedSpoilers, setRevealedSpoilers] = useState(new Set());
@@ -191,8 +193,48 @@ export function MovieDetail({ isLoggedIn }) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="relative h-[400px] bg-gradient-to-t from-background to-transparent">
+      <style>{`
+        .md-hero {
+          position: relative; width: 100%; overflow: hidden;
+          aspect-ratio: 16/9; max-height: 50vh;
+        }
+        .md-hero-title { font-size: 1.5rem; line-height: 1.2; }
+        .md-hero-meta { font-size: 0.85rem; gap: 0.5rem; }
+        .md-hero-buttons { gap: 0.4rem; }
+        .md-hero-buttons button { font-size: 0.75rem; padding: 0.4rem 0.7rem; height: auto; }
+        .md-layout { display: flex; flex-direction: column; gap: 1.5rem; }
+        .md-poster { width: 140px; margin: 0 auto; flex-shrink: 0; }
+        .md-main { min-width: 0; width: 100%; }
+        .md-sidebar { width: 100%; }
+
+        @media (min-width: 640px) {
+          .md-hero { aspect-ratio: 21/9; max-height: 60vh; }
+          .md-hero-title { font-size: 2rem; }
+          .md-hero-buttons button { font-size: 0.85rem; padding: 0.5rem 1rem; }
+          .md-poster { width: 160px; }
+        }
+
+        @media (min-width: 768px) {
+          .md-hero { aspect-ratio: 2.4/1; max-height: 70vh; }
+          .md-hero-title { font-size: 2.5rem; }
+          .md-hero-meta { font-size: 1rem; gap: 1rem; }
+          .md-hero-buttons button { font-size: revert; padding: revert; height: revert; }
+          .md-layout { flex-direction: row; flex-wrap: wrap; gap: 1.5rem; }
+          .md-poster { width: 180px; margin: 0; }
+          .md-main { flex: 1 1 calc(100% - 212px); min-width: 0; }
+          .md-sidebar { width: 100%; flex-shrink: 0; }
+        }
+
+        @media (min-width: 1024px) {
+          .md-hero-title { font-size: 3rem; }
+          .md-layout { flex-wrap: nowrap; gap: 2rem; }
+          .md-poster { width: 200px; position: sticky; top: 80px; }
+          .md-main { flex: 1 1 0%; }
+          .md-sidebar { width: 280px; }
+        }
+      `}</style>
+      {/* Hero Backdrop */}
+      <div className="md-hero">
         <div className="absolute inset-0">
           <ImageWithFallback
             src={(movie.backdropUrl || movie.posterUrl)?.replace('/w500/', '/original/')}
@@ -200,264 +242,334 @@ export function MovieDetail({ isLoggedIn }) {
             className="w-full h-full object-cover opacity-40"
           />
         </div>
-        <div className="relative container mx-auto px-4 h-full flex items-end pb-8">
-          <div className="flex gap-6 items-end">
-            <Card className="w-48 overflow-hidden shadow-2xl">
-              <ImageWithFallback
-                src={movie.posterUrl}
-                alt={movie.title}
-                className="w-full aspect-[2/3] object-cover"
-              />
-            </Card>
-            <div className="text-foreground pb-4">
-              <h1 className="text-5xl font-bold mb-3">{movie.title}</h1>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex items-center gap-1 bg-primary text-primary-foreground px-3 py-1 rounded">
-                  <Star className="h-5 w-5 fill-current" />
-                  <span className="font-bold text-lg">{movie.tmdbRating}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>{movie.releaseDate?.substring(0, 4)}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  <span>{movie.runtime}</span>
-                </div>
+        {/* Gradient overlay for readability */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, var(--background) 0%, transparent 60%)' }} />
+
+        {/* Centered movie info over the backdrop */}
+        <div className="relative container mx-auto px-4 h-full flex items-center">
+          <div className="text-foreground" style={{ maxWidth: '720px' }}>
+            <h1 className="md-hero-title font-bold mb-3">{movie.title}</h1>
+            <div className="md-hero-meta flex items-center mb-4" style={{ flexWrap: 'wrap' }}>
+              <div className="flex items-center gap-1 bg-primary text-primary-foreground px-3 py-1 rounded">
+                <Star className="h-5 w-5 fill-current" />
+                <span className="font-bold text-lg">{movie.tmdbRating}</span>
               </div>
-              <div className="flex gap-2 mb-4">
-                {movie.genres?.map((g) => (
-                  <Badge key={g} variant="secondary" className="bg-foreground/10 text-foreground border-0">
-                    {g}
-                  </Badge>
-                ))}
+              <div className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                <span>{movie.releaseDate?.substring(0, 4)}</span>
               </div>
-              <div className="flex gap-2">
-                <Button 
-                  size="lg"
-                  onClick={() => navigate(`/movie/${movie.tmdbId}/review`)}
-                >
-                  Write Review
-                </Button>
+              <div className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                <span>{movie.runtime}</span>
+              </div>
+            </div>
+            <div className="flex gap-2 mb-4" style={{ flexWrap: 'wrap' }}>
+              {movie.genres?.map((g) => (
+                <Badge key={g} variant="secondary" className="bg-foreground/10 text-foreground border-0">
+                  {g}
+                </Badge>
+              ))}
+            </div>
+            <div className="md-hero-buttons flex gap-2" style={{ flexWrap: 'wrap' }}>
+              <Button 
+                size="lg"
+                onClick={() => navigate(`/movie/${movie.tmdbId}/review`)}
+              >
+                Write Review
+              </Button>
+              
+              {movie.trailerUrl && (
                 <Button 
                   size="lg" 
-                  variant="outline" 
-                  onClick={handleFavoriteToggle}
-                  className={`border-foreground/20 text-foreground hover:bg-foreground/10 ${isFavorited ? 'bg-primary/20 text-primary border-primary/50 hover:bg-primary/30' : 'bg-foreground/5'}`}
+                  variant="outline"
+                  className="bg-foreground/5 border-foreground/20 text-foreground hover:bg-foreground/10"
+                  onClick={() => setTrailerOpen(true)}
                 >
-                  <Heart className={`h-4 w-4 mr-2 ${isFavorited ? 'fill-current' : ''}`} />
-                  {isFavorited ? 'Favorited' : 'Add to Favorites'}
+                  <Play className="mr-2 h-4 w-4 fill-current" /> Watch Trailer
                 </Button>
-                <Button size="lg" variant="outline" className="bg-foreground/5 border-foreground/20 text-foreground hover:bg-foreground/10">
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              </div>
+              )}
+
+              <Button 
+                size="lg" 
+                variant="outline" 
+                onClick={handleFavoriteToggle}
+                className={`border-foreground/20 text-foreground hover:bg-foreground/10 ${isFavorited ? 'bg-primary/20 text-primary border-primary/50 hover:bg-primary/30' : 'bg-foreground/5'}`}
+              >
+                <Heart className={`h-4 w-4 mr-2 ${isFavorited ? 'fill-current' : ''}`} />
+                {isFavorited ? 'Favorited' : 'Add to Favorites'}
+              </Button>
+              <Button size="lg" variant="outline" className="bg-foreground/5 border-foreground/20 text-foreground hover:bg-foreground/10">
+                <Share2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Synopsis */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-2xl font-bold mb-4 text-foreground">Synopsis</h2>
-                <p className="text-muted-foreground leading-relaxed">{movie.overview}</p>
-              </CardContent>
+      <div className="container mx-auto px-4" style={{ paddingTop: '1.5rem', paddingBottom: '2rem' }}>
+        <div className="md-layout">
+          
+          {/* Poster Column — sticky on desktop, centered on mobile */}
+          <div className="md-poster">
+            <Card className="overflow-hidden shadow-2xl">
+              <ImageWithFallback
+                src={movie.posterUrl}
+                alt={movie.title}
+                className="w-full object-cover"
+                style={{ aspectRatio: '2/3' }}
+              />
             </Card>
+          </div>
 
-            {/* Reviews */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-foreground">Reviews ({reviews.length})</h2>
-                  <Button onClick={() => navigate(`/movie/${movie.tmdbId}/review`)}>
-                    Write Review
-                  </Button>
-                </div>
+          <div className="md-main">
+            <div className="space-y-6">
+              {/* Synopsis */}
+              <Card>
+                <CardContent className="p-6">
+                  <h2 className="text-2xl font-bold mb-4 text-foreground">Synopsis</h2>
+                  <p className="text-muted-foreground leading-relaxed">{movie.overview}</p>
+                </CardContent>
+              </Card>
 
-                {reviewsLoading && (
-                  <p className="text-muted-foreground text-center py-4">Loading reviews...</p>
-                )}
+              {/* Reviews */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-foreground">Reviews ({reviews.length})</h2>
+                    <Button onClick={() => navigate(`/movie/${movie.tmdbId}/review`)}>
+                      Write Review
+                    </Button>
+                  </div>
 
-                {reviewsError && (
-                  <p className="text-destructive text-center py-4">Error: {reviewsError}</p>
-                )}
+                  {reviewsLoading && (
+                    <p className="text-muted-foreground text-center py-4">Loading reviews...</p>
+                  )}
 
-                {!reviewsLoading && !reviewsError && reviews.length > 0 ? (
-                  <div className="space-y-6">
-                    {reviews.map((review) => (
-                      <div key={review.id}>
-                        <div className="flex items-start gap-3 mb-3">
-                          <Avatar 
-                            className="cursor-pointer"
-                            onClick={() => navigate(`/profile/${review.username}`)}
-                          >
-                            <AvatarImage src={review.userAvatarUrl} alt={review.username} />
-                            <AvatarFallback>{review.username[0]}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="flex items-center gap-2">
-                                <span 
-                                  className="font-semibold cursor-pointer hover:underline text-foreground"
-                                  onClick={() => navigate(`/profile/${review.username}`)}
-                                >
-                                  {review.userFullName || review.username}
-                                </span>
-                                {review.hasSpoilers && (
-                                  <Badge variant="destructive" className="text-xs">Spoiler Warning</Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1">
-                                  {[...Array(5)].map((_, i) => (
-                                    <Star
-                                      key={i}
-                                      className={`h-4 w-4 ${
-                                        i < review.rating
-                                          ? 'fill-yellow-400 text-yellow-400'
-                                          : 'text-muted-foreground/30'
-                                      }`}
-                                    />
-                                  ))}
+                  {reviewsError && (
+                    <p className="text-destructive text-center py-4">Error: {reviewsError}</p>
+                  )}
+
+                  {!reviewsLoading && !reviewsError && reviews.length > 0 ? (
+                    <div className="space-y-6">
+                      {reviews.slice(0, visibleReviewsCount).map((review) => (
+                        <div key={review.id}>
+                          <div className="flex items-start gap-3 mb-3">
+                            <Avatar 
+                              className="cursor-pointer"
+                              onClick={() => navigate(`/profile/${review.username}`)}
+                            >
+                              <AvatarImage src={review.userAvatarUrl} alt={review.username} />
+                              <AvatarFallback>{review.username[0]}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span 
+                                    className="font-semibold cursor-pointer hover:underline text-foreground"
+                                    onClick={() => navigate(`/profile/${review.username}`)}
+                                  >
+                                    {review.userFullName || review.username}
+                                  </span>
+                                  {review.hasSpoilers && (
+                                    <Badge variant="destructive" className="text-xs">Spoiler Warning</Badge>
+                                  )}
                                 </div>
-                                {isLoggedIn && review.isOwnReview && (
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-1">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`h-4 w-4 ${
+                                          i < review.rating
+                                            ? 'fill-yellow-400 text-yellow-400'
+                                            : 'text-muted-foreground/30'
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                  {isLoggedIn && review.isOwnReview && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 px-2 text-destructive hover:text-destructive"
+                                      onClick={() => handleDelete(review.id)}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-2">{review.createdAt}</p>
+                              <h3 className="font-semibold mb-2 text-foreground">{review.title}</h3>
+                              {review.hasSpoilers && !revealedSpoilers.has(review.id) ? (
+                                <div className="relative">
+                                  <p className="text-muted-foreground select-none" style={{ filter: 'blur(8px)' }}>{review.content}</p>
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => toggleSpoilerReveal(review.id)}
+                                    >
+                                      <Eye className="h-4 w-4 mr-2" />
+                                      Reveal Spoiler
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-muted-foreground">{review.content}</p>
+                              )}
+                              <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
+                                {isLoggedIn && (
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="h-8 px-2 text-destructive hover:text-destructive"
-                                    onClick={() => handleDelete(review.id)}
+                                    className={`h-8 px-2 ${review.isLikedByMe ? 'text-red-500' : ''}`}
+                                    onClick={() => handleLikeToggle(review.id, review.isLikedByMe)}
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Heart className={`h-4 w-4 mr-1 ${review.isLikedByMe ? 'fill-current' : ''}`} />
+                                    {review.likeCount}
                                   </Button>
+                                )}
+                                {!isLoggedIn && (
+                                  <span className="flex items-center gap-1">
+                                    <Heart className="h-4 w-4" />
+                                    {review.likeCount}
+                                  </span>
                                 )}
                               </div>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-2">{review.createdAt}</p>
-                            <h3 className="font-semibold mb-2 text-foreground">{review.title}</h3>
-                            {review.hasSpoilers && !revealedSpoilers.has(review.id) ? (
-                              <div className="relative">
-                                <p className="text-muted-foreground select-none" style={{ filter: 'blur(8px)' }}>{review.content}</p>
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => toggleSpoilerReveal(review.id)}
-                                  >
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    Reveal Spoiler
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <p className="text-muted-foreground">{review.content}</p>
-                            )}
-                            <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                              {isLoggedIn && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className={`h-8 px-2 ${review.isLikedByMe ? 'text-red-500' : ''}`}
-                                  onClick={() => handleLikeToggle(review.id, review.isLikedByMe)}
-                                >
-                                  <Heart className={`h-4 w-4 mr-1 ${review.isLikedByMe ? 'fill-current' : ''}`} />
-                                  {review.likeCount}
-                                </Button>
-                              )}
-                              {!isLoggedIn && (
-                                <span className="flex items-center gap-1">
-                                  <Heart className="h-4 w-4" />
-                                  {review.likeCount}
-                                </span>
-                              )}
-                            </div>
                           </div>
+                          <Separator className="mt-6" />
                         </div>
-                        <Separator className="mt-6" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  !reviewsLoading && !reviewsError && (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground mb-4">No reviews yet. Be the first to review!</p>
-                      <Button onClick={() => navigate(`/movie/${movie.tmdbId}/review`)}>
-                        Write the First Review
-                      </Button>
+                      ))}
+                      {reviews.length > visibleReviewsCount && (
+                        <div className="flex justify-center mt-6 pt-4">
+                          <Button variant="outline" onClick={() => setVisibleReviewsCount(prev => prev + 10)}>
+                            Load More Reviews
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  )
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    !reviewsLoading && !reviewsError && (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground mb-4">No reviews yet. Be the first to review!</p>
+                        <Button onClick={() => navigate(`/movie/${movie.tmdbId}/review`)}>
+                          Write the First Review
+                        </Button>
+                      </div>
+                    )
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Movie Info */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-bold mb-4 text-foreground">Movie Information</h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Release Year</p>
-                    <p className="font-semibold text-foreground">{movie.releaseDate?.substring(0, 4)}</p>
-                  </div>
-                  <Separator />
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Duration</p>
-                    <p className="font-semibold text-foreground">{movie.runtime}</p>
-                  </div>
-                  <Separator />
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Language</p>
-                    <p className="font-semibold text-foreground">{movie.originalLanguage?.toUpperCase()}</p>
-                  </div>
-                  <Separator />
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Genres</p>
-                    <div className="flex flex-wrap gap-1">
-                      {movie.genres?.map((g) => (
-                        <Badge key={g} variant="secondary" className="text-xs">{g}</Badge>
-                      ))}
+          {/* Sidebar — Movie Info & Stats */}
+          <div className="md-sidebar">
+            <div className="space-y-6">
+              {/* Movie Info */}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-bold mb-4 text-foreground">Movie Information</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Release Year</p>
+                      <p className="font-semibold text-foreground">{movie.releaseDate?.substring(0, 4)}</p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Duration</p>
+                      <p className="font-semibold text-foreground">{movie.runtime}</p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Language</p>
+                      <p className="font-semibold text-foreground">{movie.originalLanguage?.toUpperCase()}</p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Genres</p>
+                      <div className="flex flex-wrap gap-1">
+                        {movie.genres?.map((g) => (
+                          <Badge key={g} variant="secondary" className="text-xs">{g}</Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            {/* Stats */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-bold mb-4 text-foreground">Statistics</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">TMDB Rating</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="font-bold text-foreground">{movie.tmdbRating}</span>
+              {/* Stats */}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-bold mb-4 text-foreground">Statistics</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">TMDB Rating</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span className="font-bold text-foreground">{movie.tmdbRating}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Average Rating</span>
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span className="font-bold text-foreground">{movie.averageRating}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Total Reviews</span>
+                      <span className="font-bold text-foreground">{movie.reviewCount}</span>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Average Rating</span>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="font-bold text-foreground">{movie.averageRating}</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Total Reviews</span>
-                    <span className="font-bold text-foreground">{movie.reviewCount}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Trailer Modal */}
+      {trailerOpen && movie.trailerUrl && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onClick={() => setTrailerOpen(false)}
+        >
+          <div
+            style={{
+              position: 'relative', width: '90%', maxWidth: '960px',
+              aspectRatio: '16/9', backgroundColor: '#000', borderRadius: '12px',
+              overflow: 'hidden',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <iframe
+              src={movie.trailerUrl.replace('watch?v=', 'embed/') + '?autoplay=1'}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+            <button
+              onClick={() => setTrailerOpen(false)}
+              style={{
+                position: 'absolute', top: '12px', right: '12px',
+                background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: '50%',
+                width: '36px', height: '36px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white',
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

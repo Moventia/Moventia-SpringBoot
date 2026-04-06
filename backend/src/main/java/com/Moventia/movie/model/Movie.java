@@ -48,4 +48,5 @@ public class Movie {
 
     private String genres;    // store as comma separated "Action,Sci-Fi"
     private String runtime;   // store formatted "2h 28m"
+    private String trailerUrl; // e.g. "https://www.youtube.com/watch?v=..."
 }

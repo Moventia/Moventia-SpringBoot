@@ -27,6 +27,7 @@ public class MovieResponse {
     private String originalLanguage;
     private Double tmdbRating;
     private String runtime;      // formatted e.g. "2h 28m"
+    private String trailerUrl;
 
     // genres only available on detail view (from TMDB response)
     private List<String> genres;
