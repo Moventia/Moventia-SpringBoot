@@ -97,8 +97,8 @@ export default function App() {
 
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/browse" element={<BrowseMovies />} />
+        <Route path="/" element={<HomePage isLoggedIn={isLoggedIn} />} />
+        <Route path="/browse" element={<BrowseMovies isLoggedIn={isLoggedIn} />} />
         <Route path="/movie/:tmdbId" element={<MovieDetail isLoggedIn={isLoggedIn} />} />
         <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
 

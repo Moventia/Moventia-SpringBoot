@@ -8,6 +8,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { EditProfileModal } from './EditProfileModal';
 import { useParams } from 'react-router-dom';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
+import { MovieCard } from './MovieCard';
 
 const API_URL = 'http://localhost:8080/api';
 
@@ -34,6 +35,11 @@ export function UserProfile({ onProfileUpdate }) {
   const [userReviews, setUserReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsError, setReviewsError] = useState(null);
+
+  // Favorites state
+  const [favoriteMovies, setFavoriteMovies] = useState([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoritesError, setFavoritesError] = useState(null);
 
   // ── Fetch profile on mount ─────────────────────────────────────────────────
   useEffect(() => {
@@ -119,6 +125,54 @@ export function UserProfile({ onProfileUpdate }) {
 
     fetchUserReviews();
   }, [user?.username]);
+
+  // ── Fetch favorites when user is loaded ──────────────────────────────────
+  useEffect(() => {
+    if (!user?.username) return;
+
+    const fetchUserFavorites = async () => {
+      try {
+        setFavoritesLoading(true);
+        setFavoritesError(null);
+        let url;
+        const headers = {};
+        const token = localStorage.getItem('token');
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        if (isOwnProfile) {
+          url = `${API_URL}/favorites`;
+        } else {
+          url = `${API_URL}/favorites/${encodeURIComponent(user.username)}`;
+        }
+
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error('Failed to fetch favorites');
+        const data = await res.json();
+
+        if (data.length === 0) {
+           setFavoriteMovies([]);
+           return;
+        }
+
+        const moviesPromises = data.map(async (fav) => {
+           const movieRes = await fetch(`${API_URL}/movies/${fav.tmdbId}`);
+           if (movieRes.ok) {
+              return await movieRes.json();
+           }
+           return null;
+        });
+
+        const fullMovies = await Promise.all(moviesPromises);
+        setFavoriteMovies(fullMovies.filter(m => m !== null));
+      } catch (err) {
+        setFavoritesError(err.message);
+      } finally {
+        setFavoritesLoading(false);
+      }
+    };
+
+    fetchUserFavorites();
+  }, [user?.username, isOwnProfile]);
 
   // ── Delete review ─────────────────────────────────────────────────────────
   const handleDeleteReview = async (reviewId) => {
@@ -350,15 +404,40 @@ export function UserProfile({ onProfileUpdate }) {
           </TabsContent>
 
           <TabsContent value="favorites">
-            <Card>
-              <CardContent className="p-12 text-center">
-                <p className="text-muted-foreground">
-                  {isOwnProfile
-                    ? "You haven't added any favorites yet"
-                    : `${user.name} hasn't added any favorites yet`}
-                </p>
-              </CardContent>
-            </Card>
+            {favoritesLoading && (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Loading favorites...</p>
+              </div>
+            )}
+            {favoritesError && (
+              <div className="text-center py-8">
+                <p className="text-destructive">Error: {favoritesError}</p>
+              </div>
+            )}
+            {!favoritesLoading && !favoritesError && favoriteMovies.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {favoriteMovies.map((movie) => (
+                  <MovieCard key={movie.tmdbId} movie={movie} isLoggedIn={!!localStorage.getItem('token')} />
+                ))}
+              </div>
+            ) : (
+              !favoritesLoading && !favoritesError && (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <p className="text-muted-foreground mb-4">
+                      {isOwnProfile
+                        ? "You haven't added any favorites yet"
+                        : `${user.name} hasn't added any favorites yet`}
+                    </p>
+                    {isOwnProfile && (
+                      <Button onClick={() => navigate('/browse')}>
+                        Browse Movies
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            )}
           </TabsContent>
 
           <TabsContent value="activity">

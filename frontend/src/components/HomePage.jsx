@@ -6,6 +6,7 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
+import { MovieCard } from './MovieCard';
 
 const API_URL = 'http://localhost:8080/api';
 
@@ -89,7 +90,7 @@ export function HomePage({ isLoggedIn }) {
       <div className="relative h-[500px] bg-gradient-to-b from-[#1a1510] via-[#0f0d0a] to-background overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <ImageWithFallback
-            src={featuredMovie.backdropUrl || featuredMovie.posterUrl}
+            src={(featuredMovie.backdropUrl || featuredMovie.posterUrl)?.replace('/w500/', '/original/')}
             alt={featuredMovie.title}
             className="w-full h-full object-cover"
             loading="lazy"
@@ -150,28 +151,7 @@ export function HomePage({ isLoggedIn }) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {trendingMovies.map((movie) => (
-              <Card 
-                key={movie.tmdbId} 
-                className="overflow-hidden cursor-pointer hover:shadow-lg hover:shadow-primary/5 transition-all hover:border-primary/30"
-                onClick={() => navigate(`/movie/${movie.tmdbId}`)}
-              >
-                <div className="aspect-[2/3] relative">
-                  <ImageWithFallback
-                    src={movie.posterUrl}
-                    alt={movie.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute top-2 right-2 bg-black/80 text-white px-2 py-1 rounded flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-semibold">{movie.tmdbRating}</span>
-                  </div>
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold mb-1 text-foreground">{movie.title}</h3>
-                  <p className="text-sm text-muted-foreground">{movie.releaseDate?.substring(0, 4)} • {movie.genres?.join(', ')}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{movie.reviewCount} reviews</p>
-                </CardContent>
-              </Card>
+              <MovieCard key={movie.tmdbId} movie={movie} isLoggedIn={isLoggedIn} />
             ))}
           </div>
         </div>

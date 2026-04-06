@@ -22,6 +22,7 @@ export function MovieDetail({ isLoggedIn }) {
   const [movie, setMovie] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFavorited, setIsFavorited] = useState(false);
 
   // Reviews state
   const [reviews, setReviews] = useState([]);
@@ -44,8 +45,26 @@ export function MovieDetail({ isLoggedIn }) {
         setLoading(false);
       }
     };
+
+    const fetchFavoriteStatus = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch(`${API_URL}/favorites/status/${tmdbId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setIsFavorited(data.favorited);
+        }
+      } catch {
+        // silent fail
+      }
+    };
+
     fetchMovie();
-  }, [tmdbId]);
+    if (isLoggedIn && tmdbId) fetchFavoriteStatus();
+  }, [tmdbId, isLoggedIn]);
 
   // Fetch reviews after movie loads
   useEffect(() => {
@@ -107,6 +126,27 @@ export function MovieDetail({ isLoggedIn }) {
     }
   };
 
+  const handleFavoriteToggle = async () => {
+    if (!isLoggedIn) {
+      navigate('/login');
+      return;
+    }
+
+    const currentlyFavorited = isFavorited;
+    setIsFavorited(!currentlyFavorited);
+
+    try {
+      const method = currentlyFavorited ? 'DELETE' : 'POST';
+      const res = await fetch(`${API_URL}/favorites/${tmdbId}`, {
+        method,
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to toggle favorite');
+    } catch {
+      setIsFavorited(currentlyFavorited);
+    }
+  };
+
   const handleDelete = async (reviewId) => {
     try {
       const res = await fetch(`${API_URL}/reviews/${reviewId}`, {
@@ -155,7 +195,7 @@ export function MovieDetail({ isLoggedIn }) {
       <div className="relative h-[400px] bg-gradient-to-t from-background to-transparent">
         <div className="absolute inset-0">
           <ImageWithFallback
-            src={movie.backdropUrl || movie.posterUrl}
+            src={(movie.backdropUrl || movie.posterUrl)?.replace('/w500/', '/original/')}
             alt={movie.title}
             className="w-full h-full object-cover opacity-40"
           />
@@ -199,9 +239,14 @@ export function MovieDetail({ isLoggedIn }) {
                 >
                   Write Review
                 </Button>
-                <Button size="lg" variant="outline" className="bg-foreground/5 border-foreground/20 text-foreground hover:bg-foreground/10">
-                  <Heart className="h-4 w-4 mr-2" />
-                  Add to Favorites
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  onClick={handleFavoriteToggle}
+                  className={`border-foreground/20 text-foreground hover:bg-foreground/10 ${isFavorited ? 'bg-primary/20 text-primary border-primary/50 hover:bg-primary/30' : 'bg-foreground/5'}`}
+                >
+                  <Heart className={`h-4 w-4 mr-2 ${isFavorited ? 'fill-current' : ''}`} />
+                  {isFavorited ? 'Favorited' : 'Add to Favorites'}
                 </Button>
                 <Button size="lg" variant="outline" className="bg-foreground/5 border-foreground/20 text-foreground hover:bg-foreground/10">
                   <Share2 className="h-4 w-4" />

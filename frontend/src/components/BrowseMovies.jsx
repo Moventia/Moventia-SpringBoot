@@ -13,6 +13,7 @@ import {
 } from './ui/select';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
+import { MovieCard } from './MovieCard';
 
 const API_URL = 'http://localhost:8080/api';
 
@@ -30,7 +31,7 @@ const SORT_OPTIONS = [
   { label: 'Newest', value: 'release_date.desc' },
 ];
 
-export function BrowseMovies() {
+export function BrowseMovies({ isLoggedIn }) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [language, setLanguage] = useState('all');
@@ -150,41 +151,7 @@ export function BrowseMovies() {
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {movies.map((movie) => (
-                <Card
-                  key={movie.tmdbId}
-                  className="overflow-hidden cursor-pointer hover:shadow-lg hover:shadow-primary/5 transition-all hover:scale-105 hover:border-primary/30"
-                  onClick={() => navigate(`/movie/${movie.tmdbId}`)}
-                >
-                  <div className="aspect-[2/3] relative">
-                    <ImageWithFallback
-                      src={movie.posterUrl}
-                      alt={movie.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-2 right-2 bg-black/80 text-white px-2 py-1 rounded flex items-center gap-1">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-semibold">
-                        {movie.tmdbRating}
-                      </span>
-                    </div>
-                  </div>
-
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold mb-1 line-clamp-1 text-foreground">
-                      {movie.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {movie.releaseDate?.substring(0, 4)}
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {movie.genres?.slice(0, 2).map((g) => (
-                        <Badge key={g} variant="secondary" className="text-xs">
-                          {g}
-                        </Badge>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                <MovieCard key={movie.tmdbId} movie={movie} isLoggedIn={isLoggedIn} />
               ))}
             </div>
 
