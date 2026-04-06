@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { X, User, FileText, Image as ImageIcon, Upload } from 'lucide-react';
 
-const API_URL = 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 export function EditProfileModal({ user, onClose, onSaved }) {
   const [fullName, setFullName] = useState(user.name || '');
@@ -55,7 +55,7 @@ export function EditProfileModal({ user, onClose, onSaved }) {
           throw new Error('Avatar upload failed');
         }
         const data = await uploadRes.json();
-        finalAvatarUrl = `http://localhost:8080${data.avatarUrl}`; // Absolute URL for simplicity
+        finalAvatarUrl = `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:8080'}${data.avatarUrl}`; // Absolute URL for simplicity
       }
 
       // 2. Update profile data

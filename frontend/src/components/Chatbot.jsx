@@ -18,7 +18,7 @@ export function Chatbot({ user }) {
   const [isLoading, setIsLoading] = useState(false);
   const [watchedMovies, setWatchedMovies] = useState([]);
   const scrollRef = useRef(null);
-  const API_URL = 'http://localhost:8080/api';
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
   useEffect(() => {
     if (user?.username) {

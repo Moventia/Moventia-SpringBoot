@@ -23,8 +23,7 @@ public class MovieService {
     public MovieService(
             MovieRepository movieRepository,
             TmdbClient tmdbClient,
-            @Value("${tmdb.image.base-url}") String imageBaseUrl
-    ) {
+            @Value("${tmdb.image.base-url}") String imageBaseUrl) {
         this.movieRepository = movieRepository;
         this.tmdbClient = tmdbClient;
         this.imageBaseUrl = imageBaseUrl;
@@ -68,14 +67,15 @@ public class MovieService {
                 .title(movie.getTitle())
                 .overview(movie.getOverview())
                 .posterUrl(movie.getPosterPath() != null
-                        ? imageBaseUrl + movie.getPosterPath() : null)
+                        ? imageBaseUrl + movie.getPosterPath()
+                        : null)
                 .backdropUrl(movie.getBackdropPath() != null
-                        ? imageBaseUrl + movie.getBackdropPath() : null)
+                        ? imageBaseUrl + movie.getBackdropPath()
+                        : null)
                 .releaseDate(movie.getReleaseDate())
                 .originalLanguage(movie.getOriginalLanguage())
                 .tmdbRating(movie.getTmdbRating())
                 .runtime(movie.getRuntime())
-                .trailerUrl(movie.getTrailerUrl())
                 .genres(genres)
                 .reviewCount(movie.getReviewCount())
                 .averageRating(movie.getAverageRating())
@@ -113,8 +113,8 @@ public class MovieService {
     private Movie mapToEntity(TmdbMovieResponse tmdb) {
         String genres = tmdb.getGenres() != null
                 ? tmdb.getGenres().stream()
-                .map(TmdbMovieResponse.Genre::getName)
-                .collect(Collectors.joining(","))
+                        .map(TmdbMovieResponse.Genre::getName)
+                        .collect(Collectors.joining(","))
                 : null;
 
         String runtime = null;
@@ -122,21 +122,6 @@ public class MovieService {
             int hours = tmdb.getRuntime() / 60;
             int mins = tmdb.getRuntime() % 60;
             runtime = (hours > 0 ? hours + "h " : "") + mins + "m";
-        }
-
-        String trailerUrl = null;
-        if (tmdb.getVideos() != null && tmdb.getVideos().getResults() != null) {
-            Optional<TmdbMovieResponse.Video> trailer = tmdb.getVideos().getResults().stream()
-                    .filter(v -> "YouTube".equals(v.getSite()) && "Trailer".equals(v.getType()))
-                    .findFirst();
-            if (trailer.isEmpty()) {
-                trailer = tmdb.getVideos().getResults().stream()
-                        .filter(v -> "YouTube".equals(v.getSite()) && "Teaser".equals(v.getType()))
-                        .findFirst();
-            }
-            if (trailer.isPresent()) {
-                trailerUrl = "https://www.youtube.com/watch?v=" + trailer.get().getKey();
-            }
         }
 
         return Movie.builder()
@@ -150,7 +135,6 @@ public class MovieService {
                 .tmdbRating(tmdb.getVoteAverage())
                 .genres(genres)
                 .runtime(runtime)
-                .trailerUrl(trailerUrl)
                 .build();
     }
 
@@ -178,23 +162,6 @@ public class MovieService {
                     .collect(Collectors.toList());
         }
 
-        String trailerUrl = null;
-        if (movie != null && movie.getTrailerUrl() != null) {
-            trailerUrl = movie.getTrailerUrl();
-        } else if (tmdb.getVideos() != null && tmdb.getVideos().getResults() != null) {
-            Optional<TmdbMovieResponse.Video> trailer = tmdb.getVideos().getResults().stream()
-                    .filter(v -> "YouTube".equals(v.getSite()) && "Trailer".equals(v.getType()))
-                    .findFirst();
-            if (trailer.isEmpty()) {
-                trailer = tmdb.getVideos().getResults().stream()
-                        .filter(v -> "YouTube".equals(v.getSite()) && "Teaser".equals(v.getType()))
-                        .findFirst();
-            }
-            if (trailer.isPresent()) {
-                trailerUrl = "https://www.youtube.com/watch?v=" + trailer.get().getKey();
-            }
-        }
-
         return MovieResponse.builder()
                 .id(dbId)
                 .tmdbId(tmdb.getId())
@@ -206,7 +173,6 @@ public class MovieService {
                 .originalLanguage(tmdb.getOriginalLanguage())
                 .tmdbRating(tmdb.getVoteAverage())
                 .runtime(runtime)
-                .trailerUrl(trailerUrl)
                 .genres(genres)
                 .reviewCount(reviewCount)
                 .averageRating(avgRating)

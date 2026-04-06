@@ -3,7 +3,7 @@ import { Film, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
-const API_URL = 'http://localhost:8080/api/auth';
+const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:8080/api'}/auth`;
 
 export function LoginPage({ onLogin }) {
   const navigate = useNavigate();

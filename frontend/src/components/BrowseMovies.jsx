@@ -15,7 +15,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 import { MovieCard } from './MovieCard';
 
-const API_URL = 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 const LANGUAGES = [
   { label: 'All', value: 'all' },

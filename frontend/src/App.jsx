@@ -12,7 +12,7 @@ import { WriteReview } from './components/WriteReview';
 import { FollowersPage } from './components/FollowersPage';
 import { Chatbot } from './components/Chatbot';
 
-const API_URL = 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 // Simple protected route wrapper
 function ProtectedRoute({ isLoggedIn, children }) {

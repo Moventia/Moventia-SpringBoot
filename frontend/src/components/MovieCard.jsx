@@ -5,7 +5,7 @@ import { Badge } from './ui/badge';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
-const API_URL = 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 export function MovieCard({ movie, isLoggedIn }) {
   const navigate = useNavigate();

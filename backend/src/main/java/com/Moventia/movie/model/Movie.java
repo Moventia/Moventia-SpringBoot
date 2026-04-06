@@ -26,12 +26,12 @@ public class Movie {
     @Column(columnDefinition = "TEXT")
     private String overview;
 
-    private String posterPath;       // e.g. "/abc123.jpg" — prefix with tmdb image base url
+    private String posterPath; // e.g. "/abc123.jpg" — prefix with tmdb image base url
     private String backdropPath;
     private String releaseDate;
     private String originalLanguage; // "en", "hi", "ta" etc
 
-    private Double tmdbRating;       // TMDB's own vote average
+    private Double tmdbRating; // TMDB's own vote average
 
     // ── Your app's own stats (updated when reviews are posted) ──
     @Builder.Default
@@ -46,7 +46,6 @@ public class Movie {
 
     // Movie.java — add these two fields
 
-    private String genres;    // store as comma separated "Action,Sci-Fi"
-    private String runtime;   // store formatted "2h 28m"
-    private String trailerUrl; // e.g. "https://www.youtube.com/watch?v=..."
+    private String genres; // store as comma separated "Action,Sci-Fi"
+    private String runtime; // store formatted "2h 28m"
 }

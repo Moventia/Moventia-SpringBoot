@@ -9,7 +9,7 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 import { useParams } from 'react-router-dom';
 import { useAppNavigate as useNavigate } from '../hooks/useAppNavigate';
 
-const API_URL = 'http://localhost:8080/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 const authHeaders = () => ({
   'Content-Type': 'application/json',
